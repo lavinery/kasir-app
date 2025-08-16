@@ -91,6 +91,9 @@
     {{-- TAMBAHAN: SortableJS untuk drag & drop favorit --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     
+    {{-- TAMBAHAN: SweetAlert2 untuk notifikasi cantik --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <!-- AdminLTE App -->
     <script src="{{ asset('AdminLTE-2/dist/js/adminlte.min.js') }}"></script>
     <!-- Validator -->
@@ -156,13 +159,147 @@
             {{-- TAMBAHAN: Global AJAX error handler --}}
             $(document).ajaxError(function(event, xhr, settings) {
                 if (xhr.status === 419) {
-                    alert('Sesi telah berakhir. Silakan refresh halaman.');
-                    location.reload();
+                    showErrorAlert('Sesi telah berakhir. Silakan refresh halaman.');
+                    setTimeout(() => location.reload(), 2000);
                 }
             });
         });
 
-      
+        // ========== SWEETALERT2 FUNCTIONS ==========
+        
+        // Fungsi untuk notifikasi sukses
+        window.showSuccessAlert = function(message = 'Data berhasil disimpan!') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: message,
+                timer: 2500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end',
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown'
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp'
+                }
+            });
+        };
+
+        // Fungsi untuk notifikasi error
+        window.showErrorAlert = function(message = 'Terjadi kesalahan!') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: message,
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        };
+
+        // Fungsi untuk notifikasi warning
+        window.showWarningAlert = function(message = 'Peringatan!') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Peringatan',
+                text: message,
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        };
+
+        // Fungsi untuk notifikasi info
+        window.showInfoAlert = function(message = 'Informasi') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Info',
+                text: message,
+                timer: 2500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        };
+
+        // Fungsi untuk konfirmasi delete
+        window.showDeleteConfirm = function(callback, message = 'Yakin ingin menghapus data ini?') {
+            Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    callback();
+                }
+            });
+        };
+
+        // Fungsi untuk konfirmasi umum
+        window.showConfirm = function(callback, message = 'Yakin ingin melanjutkan?', title = 'Konfirmasi') {
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    callback();
+                }
+            });
+        };
+
+        // Notifikasi loading
+        window.showLoadingAlert = function(message = 'Memproses data...') {
+            Swal.fire({
+                title: message,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        };
+
+        // Tutup loading
+        window.closeLoadingAlert = function() {
+            Swal.close();
+        };
+
+        // Override alert default dengan SweetAlert2
+        window.alert = function(message) {
+            showInfoAlert(message);
+        };
+
+        // Override confirm default dengan SweetAlert2
+        window.confirmOriginal = window.confirm;
+        window.confirm = function(message) {
+            return new Promise((resolve) => {
+                showConfirm(() => resolve(true), message);
+                // Jika tidak dikonfirmasi, resolve false setelah delay
+                setTimeout(() => resolve(false), 100);
+            });
+        };
+
     </script>
     @stack('scripts')
 </body>

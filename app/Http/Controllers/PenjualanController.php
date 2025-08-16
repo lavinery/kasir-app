@@ -51,9 +51,6 @@ class PenjualanController extends Controller
                 }
                 return '-';
             })
-
-
-
             ->addColumn('aksi', function ($penjualan) {
                 return '
                 <div class="btn-group">
@@ -90,7 +87,7 @@ class PenjualanController extends Controller
         $penjualan->id_member = $request->id_member;
         $penjualan->total_item = $request->total_item;
         $penjualan->total_harga = $request->total;
-        $penjualan->diskon = $request->diskon;
+        $penjualan->diskon = $request->diskon; // Diskon member disimpan di tabel penjualan
         $penjualan->bayar = $request->bayar;
         $penjualan->diterima = $request->diterima;
 
@@ -105,8 +102,12 @@ class PenjualanController extends Controller
             $keuntungan_per_item = ($produk->harga_jual - $produk->harga_beli) * $item->jumlah;
             $total_keuntungan += $keuntungan_per_item;
 
-            // Perbarui diskon ke detail
-            $item->diskon = $request->diskon;
+            // PERBAIKAN: JANGAN override diskon produk dengan diskon member!
+            // $item->diskon = $request->diskon; // ❌ HAPUS BARIS INI!
+
+            // Diskon produk tetap disimpan di $item->diskon (dari produk)
+            // Diskon member disimpan di $penjualan->diskon (terpisah)
+
             $item->keuntungan = $keuntungan_per_item; // jika ada kolom ini di penjualan_detail
             $item->update();
 
@@ -120,7 +121,6 @@ class PenjualanController extends Controller
 
         return redirect()->route('transaksi.selesai');
     }
-
 
     public function show($id)
     {
@@ -203,28 +203,28 @@ class PenjualanController extends Controller
         $pdf->setPaper(0, 0, 609, 440, 'potrait');
         return $pdf->stream('Transaksi-' . date('Y-m-d-his') . '.pdf');
     }
+
     public function cetakNotaKecil($id)
-{
-    $setting = Setting::first();
-    $penjualan = Penjualan::findOrFail($id);
-    $detail = PenjualanDetail::with('produk')
-        ->where('id_penjualan', $id)
-        ->get();
+    {
+        $setting = Setting::first();
+        $penjualan = Penjualan::findOrFail($id);
+        $detail = PenjualanDetail::with('produk')
+            ->where('id_penjualan', $id)
+            ->get();
 
-    return view('penjualan.nota_kecil', compact('setting', 'penjualan', 'detail'));
-}
+        return view('penjualan.nota_kecil', compact('setting', 'penjualan', 'detail'));
+    }
 
-public function cetakNotaBesar($id)
-{
-    $setting = Setting::first();
-    $penjualan = Penjualan::findOrFail($id);
-    $detail = PenjualanDetail::with('produk')
-        ->where('id_penjualan', $id)
-        ->get();
+    public function cetakNotaBesar($id)
+    {
+        $setting = Setting::first();
+        $penjualan = Penjualan::findOrFail($id);
+        $detail = PenjualanDetail::with('produk')
+            ->where('id_penjualan', $id)
+            ->get();
 
-    $pdf = PDF::loadView('penjualan.nota_besar', compact('setting', 'penjualan', 'detail'));
-    $pdf->setPaper([0, 0, 609, 440], 'portrait');
-    return $pdf->stream('Transaksi-' . date('Y-m-d-his') . '.pdf');
-}
-
+        $pdf = PDF::loadView('penjualan.nota_besar', compact('setting', 'penjualan', 'detail'));
+        $pdf->setPaper([0, 0, 609, 440], 'portrait');
+        return $pdf->stream('Transaksi-' . date('Y-m-d-his') . '.pdf');
+    }
 }

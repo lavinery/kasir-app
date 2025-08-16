@@ -43,8 +43,9 @@
             padding: 2px 0;
         }
         .discount-item {
-            font-size: 10pt;
+            font-size: 9pt;
             color: #555;
+            font-style: italic;
         }
         .savings-highlight {
             background-color: #f0f0f0;
@@ -53,13 +54,18 @@
         }
         .price-crossed {
             text-decoration: line-through;
-            color: #888;
+            color: #666;
             font-size: 10pt;
         }
         .price-discounted {
             color: #000;
             font-weight: bold;
             font-size: 11pt;
+        }
+        .discount-label {
+            font-size: 8pt;
+            color: #d00;
+            font-weight: bold;
         }
 
         @media print {
@@ -121,104 +127,73 @@
     
     <p class="text-center">=================================</p>
     
-    <!-- Items dengan harga normal dicoret dan harga diskon -->
+    <!-- Items dengan logika diskon yang BENAR -->
     <table width="100%" style="border: 0;">
         @php
             $total_item_discount = 0;
-            $subtotal_sebelum_diskon = 0;
-            $total_diskon_member = 0;
-            
-            // Hitung diskon member dari field diskon penjualan
-            if($penjualan->diskon > 0) {
-                if($penjualan->diskon < 100) {
-                    $total_diskon_member = ($penjualan->total_harga * $penjualan->diskon) / 100;
-                } else {
-                    $total_diskon_member = $penjualan->diskon;
-                }
-            }
         @endphp
         
         @foreach ($detail as $item)
             @php
-                // Data dari database
-                $harga_jual = $item->harga_jual;
-                $subtotal_item = $item->subtotal ?? ($item->jumlah * $harga_jual);
-                $diskon_item = $item->diskon ?? 0;
+                // GUNAKAN data yang benar dari database
+                // $item->diskon = diskon PRODUK (dari tabel produk atau penjualan_detail)
+                // $penjualan->diskon = diskon MEMBER (dari settings)
                 
-                // Variabel untuk tampilan
-                $ada_diskon_item = false;
-                $harga_normal = $harga_jual;
-                $harga_setelah_diskon = $harga_jual;
-                $persen_diskon_item = 0;
+                $diskon_produk = $item->diskon ?? 0; // Diskon produk individual
                 
-                // 1. Cek diskon per item terlebih dahulu
-                if ($diskon_item > 0) {
-                    $ada_diskon_item = true;
-                    
-                    if ($diskon_item < 100) {
-                        // Diskon item dalam persen
-                        $persen_diskon_item = $diskon_item;
-                        $harga_normal = $harga_jual / (1 - ($diskon_item / 100));
-                        $harga_setelah_diskon = $harga_jual;
-                    } else {
-                        // Diskon item dalam rupiah
-                        $diskon_per_unit = $diskon_item / $item->jumlah;
-                        $harga_normal = $harga_jual + $diskon_per_unit;
-                        $harga_setelah_diskon = $harga_jual;
-                        $persen_diskon_item = ($diskon_per_unit / $harga_normal) * 100;
-                    }
-                    
-                    $total_item_discount += ($harga_normal - $harga_setelah_diskon) * $item->jumlah;
+                // Jika tidak ada diskon di detail, ambil dari produk
+                if ($diskon_produk == 0 && isset($item->produk->diskon)) {
+                    $diskon_produk = $item->produk->diskon;
                 }
                 
-                // 2. Jika tidak ada diskon item tapi ada diskon member, tampilkan efeknya
-                if (!$ada_diskon_item && $total_diskon_member > 0) {
-                    // Hitung proporsi diskon member untuk item ini
-                    $proporsi = ($item->jumlah * $harga_jual) / $penjualan->total_harga;
-                    $diskon_member_item = $total_diskon_member * $proporsi;
-                    $diskon_member_per_unit = $diskon_member_item / $item->jumlah;
+                $harga_asli = $item->harga_jual;
+                $subtotal_item = $item->subtotal ?? ($item->jumlah * $harga_asli);
+                
+                $ada_diskon_produk = ($diskon_produk > 0);
+                $harga_sebelum_diskon = $harga_asli;
+                $harga_setelah_diskon = $harga_asli;
+                $label_diskon = '';
+                $hemat_per_item = 0;
+                
+                if ($ada_diskon_produk) {
+                    $harga_sebelum_diskon = $harga_asli;
+                    $diskon_rupiah = ($harga_asli * $diskon_produk) / 100;
+                    $harga_setelah_diskon = $harga_asli - $diskon_rupiah;
+                    $label_diskon = number_format($diskon_produk, 0) . '% OFF';
                     
-                    // Harga normal adalah harga di database, setelah diskon adalah harga final
-                    $harga_normal = $harga_jual;
-                    $harga_setelah_diskon = $harga_jual - $diskon_member_per_unit;
-                    $ada_diskon_item = true; // Set true untuk menampilkan coretan
+                    $hemat_per_item = ($harga_sebelum_diskon - $harga_setelah_diskon) * $item->jumlah;
+                    $total_item_discount += $hemat_per_item;
                 }
                 
-                $subtotal_normal = $item->jumlah * $harga_normal;
-                $subtotal_final = $item->jumlah * $harga_setelah_diskon;
-                $subtotal_sebelum_diskon += $subtotal_normal;
+                $subtotal_sebelum = $item->jumlah * $harga_sebelum_diskon;
+                $subtotal_setelah = $item->jumlah * $harga_setelah_diskon;
             @endphp
             
             <tr>
-                <td colspan="3">{{ $item->produk->nama_produk }}</td>
+                <td colspan="3" style="font-weight: bold;">{{ $item->produk->nama_produk }}</td>
             </tr>
             
-            @if($ada_diskon_item && abs($harga_normal - $harga_setelah_diskon) > 10)
-                {{-- Tampilan dengan harga dicoret --}}
+            @if($ada_diskon_produk)
+                {{-- Item dengan diskon: tampilkan harga asli dicoret --}}
                 <tr>
-                    <td class="price-crossed">{{ $item->jumlah }} x {{ format_uang($harga_normal) }}</td>
-                    <td></td>
-                    <td class="text-right price-crossed">{{ format_uang($subtotal_normal) }}</td>
+                    <td class="price-crossed" style="width: 55%;">
+                        {{ $item->jumlah }} x {{ format_uang($harga_sebelum_diskon) }}
+                    </td>
+                    <td class="discount-label text-center" style="width: 20%;">{{ $label_diskon }}</td>
+                    <td class="text-right price-crossed" style="width: 25%;">{{ format_uang($subtotal_sebelum) }}</td>
                 </tr>
                 <tr>
-                    <td class="price-discounted">{{ $item->jumlah }} x {{ format_uang($harga_setelah_diskon) }}</td>
-                    <td class="discount-item">
-                        @if($diskon_item > 0)
-                            {{-- Diskon per item: tampilkan persen --}}
-                            ({{ number_format($persen_diskon_item, 0) }}% OFF)
-                        @else
-                            {{-- Diskon member: tidak tampilkan persen --}}
-                            (DISC)
-                        @endif
+                    <td class="price-discounted" style="width: 55%;">
+                        {{ $item->jumlah }} x {{ format_uang($harga_setelah_diskon) }}
                     </td>
-                    <td class="text-right price-discounted">{{ format_uang($subtotal_final) }}</td>
+                    <td style="width: 20%;"></td>
+                    <td class="text-right price-discounted" style="width: 25%;">{{ format_uang($subtotal_setelah) }}</td>
                 </tr>
             @else
-                {{-- Tampilan normal tanpa diskon --}}
+                {{-- Item tanpa diskon: tampil normal --}}
                 <tr>
-                    <td>{{ $item->jumlah }} x {{ format_uang($harga_jual) }}</td>
-                    <td></td>
-                    <td class="text-right">{{ format_uang($subtotal_item) }}</td>
+                    <td style="width: 75%;">{{ $item->jumlah }} x {{ format_uang($harga_asli) }}</td>
+                    <td style="width: 25%;" class="text-right">{{ format_uang($subtotal_item) }}</td>
                 </tr>
             @endif
         @endforeach
@@ -228,73 +203,62 @@
     <!-- Summary -->
     <table width="100%" style="border: 0;" class="total-section">
         @php
-            // Hitung subtotal sebelum semua diskon
-            $subtotal_asli = $subtotal_sebelum_diskon > 0 ? $subtotal_sebelum_diskon : $penjualan->total_harga;
+            // Hitung diskon member dari settings (di akhir transaksi)
+            $diskon_member_rupiah = 0;
+            $diskon_member_persen = 0;
+            
+            if($penjualan->diskon > 0) {
+                if($penjualan->diskon < 100) {
+                    $diskon_member_persen = $penjualan->diskon;
+                    $diskon_member_rupiah = ($penjualan->total_harga * $diskon_member_persen) / 100;
+                } else {
+                    $diskon_member_rupiah = $penjualan->diskon;
+                }
+            }
+            
+            $total_hemat = $total_item_discount + $diskon_member_rupiah;
         @endphp
         
-        @if($subtotal_asli > $penjualan->total_harga || $total_item_discount > 0)
+        <tr>
+            <td>Subtotal:</td>
+            <td class="text-right">{{ format_uang($penjualan->total_harga) }}</td>
+        </tr>
+        
+        {{-- Tampilkan diskon item jika ada --}}
+        @if($total_item_discount > 0)
             <tr>
-                <td>Subtotal:</td>
-                <td class="text-right">{{ format_uang($subtotal_asli) }}</td>
-            </tr>
-        @else
-            <tr>
-                <td>Subtotal:</td>
-                <td class="text-right">{{ format_uang($penjualan->total_harga) }}</td>
+                <td>💥 Total Disc Item:</td>
+                <td class="text-right">-{{ format_uang($total_item_discount) }}</td>
             </tr>
         @endif
         
-        @if($penjualan->diskon > 0)
-            @php
-                // Deteksi apakah diskon dalam % atau rupiah
-                $diskon_persen = 0;
-                $diskon_rupiah = $penjualan->diskon;
-                
-                // Jika diskon kecil (< 100), anggap sebagai persen
-                if($penjualan->diskon < 100) {
-                    $diskon_persen = $penjualan->diskon;
-                    $diskon_rupiah = ($penjualan->total_harga * $diskon_persen) / 100;
-                }
-            @endphp
+        {{-- Diskon Member TERPISAH di akhir transaksi --}}
+        @if($diskon_member_rupiah > 0)
             <tr>
                 <td>
                     @if(isset($penjualan->member) && $penjualan->member)
-                        Potongan Member:
+                        💳 Disc Member ({{ $diskon_member_persen }}%):
                     @else
-                        Total Diskon:
+                        🏷️ Disc Tambahan:
                     @endif
                 </td>
-                <td class="text-right">-{{ format_uang($diskon_rupiah) }}</td>
+                <td class="text-right">-{{ format_uang($diskon_member_rupiah) }}</td>
             </tr>
         @endif
         
         <tr>
-            <td>Total Item:</td>
+            <td>📦 Total Item:</td>
             <td class="text-right">{{ $penjualan->total_item }} pcs</td>
         </tr>
     </table>
     
-    {{-- Tampilkan total penghematan jika ada diskon --}}
-    @php
-        $total_savings = $total_item_discount;
-        if($penjualan->diskon > 0) {
-            if($penjualan->diskon < 100) {
-                $total_savings += ($penjualan->total_harga * $penjualan->diskon) / 100;
-            } else {
-                $total_savings += $penjualan->diskon;
-            }
-        }
-        
-        // Alternatif: hitung dari selisih subtotal dan total bayar
-        if($total_savings == 0 && isset($subtotal_asli)) {
-            $total_savings = $subtotal_asli - $penjualan->bayar;
-        }
-    @endphp
-    
-    @if($total_savings > 0)
+    {{-- Tampilkan total penghematan --}}
+    @if($total_hemat > 0)
         <table width="100%" style="border: 0;">
             <tr class="savings-highlight">
-                <td class="text-center" colspan="2">*** ANDA TELAH HEMAT: {{ format_uang($total_savings) }} ***</td>
+                <td class="text-center bold" colspan="2" style="font-size: 12pt; padding: 5px 0;">
+                    🎉 TOTAL HEMAT: {{ format_uang($total_hemat) }} 🎉
+                </td>
             </tr>
         </table>
         <br>
@@ -303,33 +267,39 @@
     <!-- Grand Total -->
     <table width="100%" style="border: 0;">
         <tr class="grand-total">
-            <td class="bold">TOTAL BAYAR:</td>
-            <td class="text-right bold">{{ format_uang($penjualan->bayar) }}</td>
+            <td class="bold" style="font-size: 13pt;">💰 TOTAL BAYAR:</td>
+            <td class="text-right bold" style="font-size: 13pt;">{{ format_uang($penjualan->bayar) }}</td>
         </tr>
         <tr>
-            <td>Tunai:</td>
+            <td>💵 Tunai:</td>
             <td class="text-right">{{ format_uang($penjualan->diterima) }}</td>
         </tr>
         <tr>
-            <td>Kembali:</td>
+            <td>💸 Kembali:</td>
             <td class="text-right">{{ format_uang($penjualan->diterima - $penjualan->bayar) }}</td>
         </tr>
     </table>
 
     <!-- Footer -->
     <p class="text-center">=================================</p>
-    <p class="text-center bold">-- TERIMA KASIH --</p>
+    <p class="text-center bold">🙏 TERIMA KASIH 🙏</p>
     <p class="text-center">Barang yang sudah dibeli</p>
     <p class="text-center">tidak dapat dikembalikan</p>
+    
+    @if($total_hemat > 0)
+        <p class="text-center discount-item">
+            ✨ Anda berhemat {{ format_uang($total_hemat) }} hari ini! ✨
+        </p>
+    @endif
     
     @if(isset($setting->website) || isset($setting->email))
         <br>
         <p class="text-center">
             @if(isset($setting->website))
-                {{ $setting->website }}
+                🌐 {{ $setting->website }}
             @endif
             @if(isset($setting->email))
-                <br>{{ $setting->email }}
+                <br>📧 {{ $setting->email }}
             @endif
         </p>
     @endif
