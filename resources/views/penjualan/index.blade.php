@@ -23,6 +23,7 @@
                         <th>Total Harga</th>
                         <th>Diskon</th>
                         <th>Total Bayar</th>
+                        {{-- Sembunyikan kolom keuntungan dari kasir (level 2) tapi tetap ada untuk admin/manager --}}
                         @if(auth()->user()->level == 1)
                             <th>Keuntungan</th>
                         @endif
@@ -43,6 +44,7 @@
     let table, table1;
 
     $(function () {
+        // Definisikan kolom dasar yang selalu ada
         let columns = [
             { data: 'DT_RowIndex', searchable: false, sortable: false },
             { data: 'tanggal' },
@@ -53,10 +55,13 @@
             { data: 'bayar' },
         ];
 
+        // Tambahkan kolom keuntungan HANYA untuk admin (level 1)
+        // Kasir (level 2) tidak akan melihat kolom ini
         @if(auth()->user()->level == 1)
             columns.push({ data: 'keuntungan' });
         @endif
 
+        // Kolom kasir dan aksi selalu ada
         columns.push({ data: 'kasir' });
         columns.push({ data: 'aksi', searchable: false, sortable: false });
 
@@ -107,13 +112,13 @@
             });
         }
     }
+    
     function printNotaKecil(url) {
-    window.open(url, '_blank');
-}
+        window.open(url, '_blank');
+    }
 
-function printNotaBesar(url) {
-    window.open(url, '_blank');
-}
-
+    function printNotaBesar(url) {
+        window.open(url, '_blank');
+    }
 </script>
 @endpush

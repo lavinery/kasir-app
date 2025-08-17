@@ -146,15 +146,6 @@
                 </li>
                 {{-- END MODIFIED --}}
             @endif
-
-            @if (auth()->user()->level == 2)
-                <li class="header">REPORT</li>
-                <li>
-                    <a href="{{ route('laporan.kasir.index') }}">
-                        <i class="fa fa-file-pdf-o"></i> <span>Laporan Kasir</span>
-                    </a>
-                </li>
-            @endif
         </ul>
     </section>
     <!-- /.sidebar -->
