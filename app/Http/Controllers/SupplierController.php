@@ -20,10 +20,15 @@ class SupplierController extends Controller
             ->of($supplier)
             ->addIndexColumn()
             ->addColumn('aksi', function ($supplier) {
+                // pakai supplier.show untuk GET prefill, dan supplier.destroy untuk hapus
                 return '
                 <div class="btn-group">
-                    <button type="button" onclick="editForm(`'. route('supplier.update', $supplier->id_supplier) .'`)" class="btn btn-xs btn-info btn-flat"><i class="fa fa-pencil"></i></button>
-                    <button type="button" onclick="deleteData(`'. route('supplier.destroy', $supplier->id_supplier) .'`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
+                    <button type="button" onclick="editForm(`' . route('supplier.show', $supplier->id_supplier) . '`)" class="btn btn-xs btn-info btn-flat" title="Edit">
+                        <i class="fa fa-pencil"></i>
+                    </button>
+                    <button type="button" onclick="deleteData(`' . route('supplier.destroy', $supplier->id_supplier) . '`)" class="btn btn-xs btn-danger btn-flat" title="Hapus">
+                        <i class="fa fa-trash"></i>
+                    </button>
                 </div>
                 ';
             })
@@ -31,77 +36,66 @@ class SupplierController extends Controller
             ->make(true);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
-        $supplier = Supplier::create($request->all());
+        $validated = $request->validate([
+            'nama'    => 'required|string|max:255',
+            'telepon' => 'required|string|max:20',
+            'alamat'  => 'nullable|string|max:500',
+        ], [
+            'nama.required'    => 'Nama supplier harus diisi',
+            'telepon.required' => 'Nomor telepon harus diisi',
+        ]);
 
-        return response()->json('Data berhasil disimpan', 200);
+        Supplier::create($validated);
+
+        // Kembalikan 204 No Content agar cocok dengan AJAX .done() tanpa JSON
+        return response()->noContent();
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function show($id)
     {
         $supplier = Supplier::find($id);
+        if (!$supplier) {
+            return response()->json(['error' => 'Supplier tidak ditemukan'], 404);
+        }
 
+        // show perlu JSON untuk prefill form edit
         return response()->json($supplier);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function update(Request $request, $id)
     {
-        $supplier = Supplier::find($id)->update($request->all());
+        $validated = $request->validate([
+            'nama'    => 'required|string|max:255',
+            'telepon' => 'required|string|max:20',
+            'alamat'  => 'nullable|string|max:500',
+        ], [
+            'nama.required'    => 'Nama supplier harus diisi',
+            'telepon.required' => 'Nomor telepon harus diisi',
+        ]);
 
-        return response()->json('Data berhasil disimpan', 200);
+        $supplier = Supplier::find($id);
+        if (!$supplier) {
+            return response()->json(['error' => 'Supplier tidak ditemukan'], 404);
+        }
+
+        $supplier->update($validated);
+
+        // 204 No Content
+        return response()->noContent();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function destroy($id)
     {
-        $supplier = Supplier::find($id)->delete();
+        $supplier = Supplier::find($id);
+        if (!$supplier) {
+            return response()->json(['error' => 'Supplier tidak ditemukan'], 404);
+        }
 
-        return response(null, 204);
+        $supplier->delete();
+
+        // 204 No Content
+        return response()->noContent();
     }
 }

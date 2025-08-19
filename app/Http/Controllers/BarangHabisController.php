@@ -389,12 +389,12 @@ class BarangHabisController extends Controller
     public function syncAll(Request $request)
     {
         try {
-            $threshold = 10; // Stok threshold
+            $threshold = 5; // Stok threshold
             $processed = 0;
             $added = 0;
             $removed = 0;
 
-            // 1. Tambahkan produk dengan stok <= 10 yang belum ada di daftar
+            // 1. Tambahkan produk dengan stok <= 5 yang belum ada di daftar
             $produkHabis = Produk::where('stok', '<=', $threshold)
                 ->whereNotIn('id_produk', function ($query) {
                     $query->select('id_produk')->from('barang_habis');
@@ -411,7 +411,7 @@ class BarangHabisController extends Controller
                 $processed++;
             }
 
-            // 2. Hapus produk AUTO yang stoknya sudah > 10
+            // 2. Hapus produk AUTO yang stoknya sudah > 5
             $produkAman = BarangHabis::with('produk')
                 ->where('tipe', 'auto')
                 ->whereHas('produk', function ($query) use ($threshold) {
@@ -458,7 +458,7 @@ class BarangHabisController extends Controller
     public function getSyncStats()
     {
         try {
-            $threshold = 10;
+            $threshold = 5;
 
             $stats = [
                 'total_barang_habis' => BarangHabis::count(),

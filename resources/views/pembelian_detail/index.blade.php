@@ -66,7 +66,7 @@
                             <div class="input-group">
                                 <input type="hidden" name="id_pembelian" id="id_pembelian" value="{{ $id_pembelian }}">
                                 <input type="hidden" name="id_produk" id="id_produk">
-                                <input type="text" class="form-control" name="kode_produk" id="kode_produk">
+                                <input type="text" class="form-control" name="kode_produk" id="kode_produk" placeholder="Scan/ketik kode produk lalu tekan Enter" autofocus>
                                 <span class="input-group-btn">
                                     <button onclick="tampilProduk()" class="btn btn-info btn-flat" type="button"><i class="fa fa-arrow-right"></i></button>
                                 </span>
@@ -166,6 +166,38 @@
         });
         table2 = $('.table-produk').DataTable();
 
+        // TAMBAHAN: Event handler untuk Enter key pada input kode produk
+        $('#kode_produk').on('keypress', function(e) {
+            if (e.which === 13) { // Enter key
+                e.preventDefault();
+                var kode_produk = $(this).val().trim();
+                
+                if (kode_produk === '') {
+                    alert('Masukkan kode produk terlebih dahulu');
+                    return;
+                }
+                
+                // Tambah produk via AJAX menggunakan kode produk
+                $.post('{{ route('pembelian_detail.store') }}', {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    kode_produk: kode_produk,
+                    id_pembelian: $('#id_pembelian').val()
+                })
+                .done(function(response) {
+                    $('#kode_produk').val('').focus();
+                    table.ajax.reload(() => loadForm($('#diskon').val()));
+                })
+                .fail(function(xhr) {
+                    let message = 'Tidak dapat menyimpan data';
+                    if (xhr.responseText) {
+                        message = xhr.responseText;
+                    }
+                    alert(message);
+                    $('#kode_produk').focus().select();
+                });
+            }
+        });
+
         $(document).on('input', '.quantity', function () {
             let id = $(this).data('id');
             let jumlah = parseInt($(this).val());
@@ -228,7 +260,7 @@
     function tambahProduk() {
         $.post('{{ route('pembelian_detail.store') }}', $('.form-produk').serialize())
             .done(response => {
-                $('#kode_produk').focus();
+                $('#kode_produk').val('').focus();
                 table.ajax.reload(() => loadForm($('#diskon').val()));
             })
             .fail(errors => {

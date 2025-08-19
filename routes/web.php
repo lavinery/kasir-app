@@ -20,150 +20,242 @@ use App\Http\Controllers\{
     FavoriteProductController
 };
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::group(['middleware' => 'auth'], function () {
+/*
+|--------------------------------------------------------------------------
+| Authenticated Routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+
+    // DASHBOARD (semua user yang login)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ADMIN & KASIR: akses Master data (kategori, member, supplier)
-    Route::group(['middleware' => 'level:1,2'], function () {
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN & KASIR ROUTES (Level 1 & 2)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('level:1,2')->group(function () {
+
+        // ==================== MASTER DATA ====================
+
+        // KATEGORI
         Route::get('/kategori/data', [KategoriController::class, 'data'])->name('kategori.data');
         Route::resource('/kategori', KategoriController::class);
 
-        Route::get('/member/data', [MemberController::class, 'data'])->name('member.data');
-        Route::post('/member/cetak-member', [MemberController::class, 'cetakMember'])->name('member.cetak_member');
-        Route::resource('/member', MemberController::class);
+        // MEMBER (CRUD - untuk semua admin & kasir)
+        Route::prefix('member')->name('member.')->group(function () {
+            Route::get('/', [MemberController::class, 'index'])->name('index');
+            Route::get('/data', [MemberController::class, 'data'])->name('data');
+            Route::post('/', [MemberController::class, 'store'])->name('store');
+            Route::get('/{member}', [MemberController::class, 'show'])->name('show');
+            Route::put('/{member}', [MemberController::class, 'update'])->name('update');
+            Route::delete('/{member}', [MemberController::class, 'destroy'])->name('destroy');
 
+            // Bulk actions
+            Route::delete('/bulk/delete', [MemberController::class, 'bulkDestroy'])->name('bulk_destroy');
+            Route::post('/cetak-member', [MemberController::class, 'cetakMember'])->name('cetak_member');
+        });
+
+        // SUPPLIER
+        Route::get('/supplier/data', [SupplierController::class, 'data'])->name('supplier.data');
+        Route::resource('/supplier', SupplierController::class);
+
+        // ==================== PRODUK ====================
+
+        Route::prefix('produk')->name('produk.')->group(function () {
+            Route::get('/', [ProdukController::class, 'index'])->name('index');
+            Route::get('/data', [ProdukController::class, 'data'])->name('data');
+            Route::post('/', [ProdukController::class, 'store'])->name('store');
+            Route::get('/{produk}', [ProdukController::class, 'show'])->name('show');
+            Route::get('/{produk}/edit', [ProdukController::class, 'edit'])->name('edit');
+            Route::put('/{produk}', [ProdukController::class, 'update'])->name('update');
+            Route::delete('/{produk}', [ProdukController::class, 'destroy'])->name('destroy');
+
+            // Bulk actions
+            Route::post('/delete-selected', [ProdukController::class, 'deleteSelected'])->name('delete_selected');
+
+            // Barcode & Export
+            Route::post('/cetak-barcode', [ProdukController::class, 'cetakBarcode'])->name('cetak_barcode');
+            Route::get('/barcode-pdf', [ProdukController::class, 'barcodePDF'])->name('barcode_pdf');
+            Route::post('/barcode-png', [ProdukController::class, 'barcodePNG'])->name('barcode_png');
+            Route::post('/cetak-daftar', [ProdukController::class, 'cetakDaftar'])->name('cetak_daftar');
+            Route::post('/export-excel', [ProdukController::class, 'exportExcel'])->name('export_excel');
+
+            // Label printing
+            Route::post('/cetak-barcode-label-33x15', [ProdukController::class, 'cetakBarcodeLabel33x15'])->name('cetak_barcode_label_33x15');
+            Route::post('/cetak-barcode-label-105', [ProdukController::class, 'cetakBarcodeLabel105'])->name('cetak_barcode_label_105');
+            Route::post('/cetak-barcode-label-107', [ProdukController::class, 'cetakBarcodeLabel107'])->name('cetak_barcode_label_107');
+        });
+
+        // ==================== BARANG HABIS ====================
+
+        Route::prefix('barang-habis')->name('barang_habis.')->group(function () {
+            Route::get('/', [BarangHabisController::class, 'index'])->name('index');
+            Route::get('/data', [BarangHabisController::class, 'data'])->name('data');
+            Route::get('/products', [BarangHabisController::class, 'getAvailableProducts'])->name('products');
+            Route::post('/manual', [BarangHabisController::class, 'storeManual'])->name('store_manual');
+            Route::put('/{id}', [BarangHabisController::class, 'update'])->name('update');
+            Route::delete('/{id}', [BarangHabisController::class, 'destroy'])->name('destroy');
+
+            // Export & Bulk actions
+            Route::get('/export-pdf', [BarangHabisController::class, 'exportPdf'])->name('export_pdf');
+            Route::delete('/bulk/delete', [BarangHabisController::class, 'bulkDestroy'])->name('bulk_destroy');
+            Route::get('/export-pdf-by-ids', [BarangHabisController::class, 'exportPdfByIds'])->name('export_pdf_by_ids');
+
+            // Sync
+            Route::post('/sync', [BarangHabisController::class, 'syncAll'])->name('sync');
+            Route::get('/sync-stats', [BarangHabisController::class, 'getSyncStats'])->name('sync_stats');
+        });
+
+        // ==================== TRANSAKSI ====================
+
+        // PEMBELIAN
+        Route::prefix('pembelian')->name('pembelian.')->group(function () {
+            Route::get('/', [PembelianController::class, 'index'])->name('index');
+            Route::get('/data', [PembelianController::class, 'data'])->name('data');
+            Route::get('/{id}/create', [PembelianController::class, 'create'])->name('create');
+            Route::post('/', [PembelianController::class, 'store'])->name('store');
+            Route::get('/{pembelian}', [PembelianController::class, 'show'])->name('show');
+            Route::put('/{pembelian}', [PembelianController::class, 'update'])->name('update');
+            Route::delete('/{pembelian}', [PembelianController::class, 'destroy'])->name('destroy');
+        });
+
+        // PEMBELIAN DETAIL - PERBAIKAN DI SINI
+        Route::prefix('pembelian_detail')->name('pembelian_detail.')->group(function () {
+            // Tambah route index yang hilang
+            Route::get('/', [PembelianDetailController::class, 'index'])->name('index');
+
+            Route::get('/{id}/data', [PembelianDetailController::class, 'data'])->name('data');
+            Route::get('/loadform/{diskon}/{total}', [PembelianDetailController::class, 'loadForm'])->name('load_form');
+            Route::post('/', [PembelianDetailController::class, 'store'])->name('store');
+            Route::put('/{pembelian_detail}', [PembelianDetailController::class, 'update'])->name('update');
+            Route::delete('/{pembelian_detail}', [PembelianDetailController::class, 'destroy'])->name('destroy');
+        });
+
+        // PENGELUARAN
+        Route::get('/pengeluaran/data', [PengeluaranController::class, 'data'])->name('pengeluaran.data');
+        Route::resource('/pengeluaran', PengeluaranController::class);
+
+        // PENJUALAN
+        Route::prefix('penjualan')->name('penjualan.')->group(function () {
+            Route::get('/', [PenjualanController::class, 'index'])->name('index');
+            Route::get('/data', [PenjualanController::class, 'data'])->name('data');
+            Route::get('/{id}', [PenjualanController::class, 'show'])->name('show');
+            Route::delete('/{id}', [PenjualanController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}/nota-kecil', [PenjualanController::class, 'cetakNotaKecil'])->name('notaKecil');
+            Route::get('/{id}/nota-besar', [PenjualanController::class, 'cetakNotaBesar'])->name('notaBesar');
+        });
+
+        // TRANSAKSI (POS)
+        Route::prefix('transaksi')->name('transaksi.')->group(function () {
+            Route::get('/baru', [PenjualanController::class, 'create'])->name('baru');
+            Route::get('/', [PenjualanDetailController::class, 'index'])->name('index');
+            Route::post('/simpan', [PenjualanController::class, 'store'])->name('simpan');
+            Route::get('/selesai', [PenjualanController::class, 'selesai'])->name('selesai');
+            Route::get('/nota-kecil', [PenjualanController::class, 'notaKecil'])->name('nota_kecil');
+            Route::get('/nota-besar', [PenjualanController::class, 'notaBesar'])->name('nota_besar');
+
+            // Detail transaksi
+            Route::get('/{id}/data', [PenjualanDetailController::class, 'data'])->name('data');
+            Route::get('/loadform/{diskon}/{total}/{diterima}', [PenjualanDetailController::class, 'loadForm'])->name('load_form');
+            Route::post('/', [PenjualanDetailController::class, 'store'])->name('store');
+            Route::put('/{transaksi}', [PenjualanDetailController::class, 'update'])->name('update');
+            Route::delete('/{transaksi}', [PenjualanDetailController::class, 'destroy'])->name('destroy');
+        });
+
+        // ==================== FAVORIT PRODUK ====================
+
+        // API untuk transaksi (semua admin & kasir)
+        Route::get('/transactions/favorites', [FavoriteProductController::class, 'forTransaction'])
+            ->name('transactions.favorites');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN ONLY ROUTES (Level 1)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('level:1')->group(function () {
+
+        // ==================== LAPORAN ====================
+
+        // LAPORAN UMUM
+        Route::prefix('laporan')->name('laporan.')->group(function () {
+            Route::get('/', [LaporanController::class, 'index'])->name('index');
+            Route::get('/data/{awal}/{akhir}', [LaporanController::class, 'data'])->name('data');
+            Route::get('/pdf/{awal}/{akhir}', [LaporanController::class, 'exportPDF'])->name('export_pdf');
+        });
+
+        // LAPORAN MEMBER (Member Statistics & Analytics)
         Route::prefix('member-stats')->name('member_stats.')->group(function () {
-            // Basic routes
             Route::get('/', [MemberStatsController::class, 'index'])->name('index');
             Route::get('/data', [MemberStatsController::class, 'data'])->name('data');
             Route::get('/{id_member}/detail', [MemberStatsController::class, 'detail'])->name('detail');
 
-            // Export routes
+            // Export
             Route::get('/export/csv', [MemberStatsController::class, 'exportCsv'])->name('export_csv');
             Route::get('/export/pdf', [MemberStatsController::class, 'exportPdf'])->name('export_pdf');
 
-            // 🔄 NEW: Sync & Utility Routes
+            // Sync & Utilities
             Route::post('/sync', [MemberStatsController::class, 'syncData'])->name('sync');
             Route::get('/summary', [MemberStatsController::class, 'getSummary'])->name('get_summary');
             Route::get('/system-status', [MemberStatsController::class, 'getSystemStatus'])->name('system_status');
         });
 
-        Route::get('/supplier/data', [SupplierController::class, 'data'])->name('supplier.data');
-        Route::resource('/supplier', SupplierController::class);
+        // ==================== SISTEM ====================
 
-        // Produk
-        Route::get('/produk/data', [ProdukController::class, 'data'])->name('produk.data');
-        Route::resource('produk', ProdukController::class);
-        Route::post('/produk/delete-selected', [ProdukController::class, 'deleteSelected'])->name('produk.delete_selected');
-        Route::post('/produk/cetak-barcode', [ProdukController::class, 'cetakBarcode'])->name('produk.cetak_barcode');
-        Route::get('/produk/barcode-pdf', [ProdukController::class, 'barcodePDF'])->name('produk.barcode_pdf');
-        Route::post('/produk/barcode-png', [ProdukController::class, 'barcodePNG'])->name('produk.barcode_png');
-        Route::post('/produk/cetak-daftar', [ProdukController::class, 'cetakDaftar'])->name('produk.cetak_daftar');
-        Route::post('/produk/export-excel', [ProdukController::class, 'exportExcel'])->name('produk.export_excel');
-        Route::post('/produk/cetak-barcode-label-33x15', [ProdukController::class, 'cetakBarcodeLabel33x15'])->name('produk.cetak_barcode_label_33x15');
-
-        // Routes untuk cetak barcode label
-        Route::post('/produk/cetak-barcode-label-105', [ProdukController::class, 'cetakBarcodeLabel105'])->name('produk.cetak_barcode_label_105');
-        Route::post('/produk/cetak-barcode-label-107', [ProdukController::class, 'cetakBarcodeLabel107'])->name('produk.cetak_barcode_label_107');
-
-        // Pembelian
-        Route::get('/pembelian/data', [PembelianController::class, 'data'])->name('pembelian.data');
-        Route::get('/pembelian/{id}/create', [PembelianController::class, 'create'])->name('pembelian.create');
-        Route::resource('/pembelian', PembelianController::class)->except('create');
-
-        Route::get('/pembelian_detail/{id}/data', [PembelianDetailController::class, 'data'])->name('pembelian_detail.data');
-        Route::get('/pembelian_detail/loadform/{diskon}/{total}', [PembelianDetailController::class, 'loadForm'])->name('pembelian_detail.load_form');
-        Route::resource('/pembelian_detail', PembelianDetailController::class)->except('create', 'show', 'edit');
-
-        // Pengeluaran
-        Route::get('/pengeluaran/data', [PengeluaranController::class, 'data'])->name('pengeluaran.data');
-        Route::resource('/pengeluaran', PengeluaranController::class);
-
-        // Penjualan
-        Route::get('/penjualan/data', [PenjualanController::class, 'data'])->name('penjualan.data');
-        Route::get('/penjualan', [PenjualanController::class, 'index'])->name('penjualan.index');
-        Route::get('/penjualan/{id}', [PenjualanController::class, 'show'])->name('penjualan.show');
-        Route::delete('/penjualan/{id}', [PenjualanController::class, 'destroy'])->name('penjualan.destroy');
-        Route::get('/penjualan/{id}/nota-kecil', [PenjualanController::class, 'cetakNotaKecil'])->name('penjualan.notaKecil');
-        Route::get('/penjualan/{id}/nota-besar', [PenjualanController::class, 'cetakNotaBesar'])->name('penjualan.notaBesar');
-
-
-        // Transaksi
-        Route::get('/transaksi/baru', [PenjualanController::class, 'create'])->name('transaksi.baru');
-        Route::post('/transaksi/simpan', [PenjualanController::class, 'store'])->name('transaksi.simpan');
-        Route::get('/transaksi/selesai', [PenjualanController::class, 'selesai'])->name('transaksi.selesai');
-        Route::get('/transaksi/nota-kecil', [PenjualanController::class, 'notaKecil'])->name('transaksi.nota_kecil');
-        Route::get('/transaksi/nota-besar', [PenjualanController::class, 'notaBesar'])->name('transaksi.nota_besar');
-
-        Route::get('/transaksi/{id}/data', [PenjualanDetailController::class, 'data'])->name('transaksi.data');
-        Route::get('/transaksi/loadform/{diskon}/{total}/{diterima}', [PenjualanDetailController::class, 'loadForm'])->name('transaksi.load_form');
-        Route::resource('/transaksi', PenjualanDetailController::class)->except('create', 'show', 'edit');
-    });
-
-    // ADMIN ONLY
-    Route::group(['middleware' => 'level:1'], function () {
-        Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
-        Route::get('/laporan/data/{awal}/{akhir}', [LaporanController::class, 'data'])->name('laporan.data');
-        Route::get('/laporan/pdf/{awal}/{akhir}', [LaporanController::class, 'exportPDF'])->name('laporan.export_pdf');
-
+        // USER MANAGEMENT
         Route::get('/user/data', [UserController::class, 'data'])->name('user.data');
         Route::resource('/user', UserController::class);
 
-        Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
-        Route::get('/setting/first', [SettingController::class, 'show'])->name('setting.show');
-        Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
+        // PENGATURAN
+        Route::prefix('setting')->name('setting.')->group(function () {
+            Route::get('/', [SettingController::class, 'index'])->name('index');
+            Route::get('/first', [SettingController::class, 'show'])->name('show');
+            Route::post('/', [SettingController::class, 'update'])->name('update');
+
+            // FAVORIT PRODUK
+            Route::get('/favorites', [FavoriteProductController::class, 'index'])->name('favorites');
+            Route::post('/favorites/add', [FavoriteProductController::class, 'add'])->name('favorites.add');
+            Route::patch('/favorites/reorder', [FavoriteProductController::class, 'reorder'])->name('favorites.reorder');
+            Route::patch('/favorites/toggle/{favorite}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
+            Route::delete('/favorites/{favorite}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
+        });
+
+        // API untuk pencarian produk (admin only)
+        Route::get('/api/products/search', [FavoriteProductController::class, 'searchProducts'])
+            ->name('api.products.search');
     });
 
-    // PROFIL
-    Route::group(['middleware' => 'level:1,2'], function () {
-        Route::get('/profil', [UserController::class, 'profil'])->name('user.profil');
-        Route::post('/profil', [UserController::class, 'updateProfil'])->name('user.update_profil');
+    /*
+    |--------------------------------------------------------------------------
+    | SHARED ROUTES (Admin & Kasir)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('level:1,2')->group(function () {
+
+        // PROFIL USER
+        Route::prefix('profil')->name('user.')->group(function () {
+            Route::get('/', [UserController::class, 'profil'])->name('profil');
+            Route::post('/', [UserController::class, 'updateProfil'])->name('update_profil');
+        });
+
+        // LAPORAN KASIR (bisa diakses admin & kasir)
+        Route::prefix('laporan')->name('laporan.')->group(function () {
+            Route::get('/kasir', [LaporanKasirController::class, 'index'])->name('kasir.index');
+            Route::post('/kasir/generate', [LaporanKasirController::class, 'generateReport'])->name('kasir.generate');
+        });
     });
-
-    // Laporan kasir (boleh diakses semua yang login)
-    Route::get('/laporan/kasir', [LaporanKasirController::class, 'index'])->name('laporan.kasir.index');
-    Route::post('/laporan/kasir/generate', [LaporanKasirController::class, 'generateReport'])->name('laporan.kasir.generate');
-});
-Route::prefix('barang-habis')->name('barang_habis.')->group(function () {
-    Route::get('/', [BarangHabisController::class, 'index'])->name('index');
-    Route::get('/data', [BarangHabisController::class, 'data'])->name('data');
-    Route::get('/products', [BarangHabisController::class, 'getAvailableProducts'])->name('products');
-    Route::post('/manual', [BarangHabisController::class, 'storeManual'])->name('store_manual');
-    Route::put('/{id}', [BarangHabisController::class, 'update'])->name('update');
-    Route::delete('/{id}', [BarangHabisController::class, 'destroy'])->name('destroy');
-    Route::get('/export-pdf', [BarangHabisController::class, 'exportPdf'])->name('export_pdf');
-
-    // BULK ACTIONS - TAMBAHAN BARU
-    Route::delete('/bulk/delete', [BarangHabisController::class, 'bulkDestroy'])->name('bulk_destroy');
-    Route::get('/export-pdf-by-ids', [BarangHabisController::class, 'exportPdfByIds'])->name('export_pdf_by_ids');
-
-    // SYNC TRIGGER - TAMBAHAN BARU
-    Route::post('/sync', [BarangHabisController::class, 'syncAll'])->name('sync');
-    Route::get('/sync-stats', [BarangHabisController::class, 'getSyncStats'])->name('sync_stats');
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Routes untuk Settings Favorit (hanya admin) - sesuaikan dengan struktur settings yang ada
-    Route::middleware('can:admin')->prefix('setting')->name('setting.')->group(function () {
-        Route::get('/favorites', [FavoriteProductController::class, 'index'])->name('favorites');
-        Route::post('/favorites/add', [FavoriteProductController::class, 'add'])->name('favorites.add');
-        Route::patch('/favorites/reorder', [FavoriteProductController::class, 'reorder'])->name('favorites.reorder');
-        Route::patch('/favorites/toggle/{favorite}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
-        Route::delete('/favorites/{favorite}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
-    });
-
-    // API untuk pencarian produk (admin only)
-    Route::get('/api/products/search', [FavoriteProductController::class, 'searchProducts'])
-        ->middleware('can:admin')
-        ->name('api.products.search');
-
-    // Route untuk panel transaksi (semua user yang login)
-    Route::get('/transactions/favorites', [FavoriteProductController::class, 'forTransaction'])
-        ->name('transactions.favorites');
 });

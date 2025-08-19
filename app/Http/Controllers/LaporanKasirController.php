@@ -20,57 +20,97 @@ class LaporanKasirController extends Controller
     {
         $request->validate([
             'kasir_id' => 'required|exists:users,id',
-            'tanggal' => 'required|date',
-            'shift' => 'required|in:1,2,3',
+            'tanggal_dari' => 'required|date',
+            'tanggal_sampai' => 'required|date|after_or_equal:tanggal_dari',
+            'shift' => 'required|in:1,2,all',
+        ], [
+            'kasir_id.required' => 'Pilih kasir terlebih dahulu',
+            'kasir_id.exists' => 'Kasir yang dipilih tidak valid',
+            'tanggal_dari.required' => 'Tanggal mulai harus diisi',
+            'tanggal_dari.date' => 'Format tanggal mulai tidak valid',
+            'tanggal_sampai.required' => 'Tanggal akhir harus diisi',
+            'tanggal_sampai.date' => 'Format tanggal akhir tidak valid',
+            'tanggal_sampai.after_or_equal' => 'Tanggal akhir harus sama atau setelah tanggal mulai',
+            'shift.required' => 'Pilih shift terlebih dahulu',
+            'shift.in' => 'Shift yang dipilih tidak valid',
         ]);
 
+        // Validate date range (max 31 days)
+        $tanggalDari = Carbon::parse($request->tanggal_dari);
+        $tanggalSampai = Carbon::parse($request->tanggal_sampai);
+
+        if ($tanggalDari->diffInDays($tanggalSampai) > 31) {
+            return back()->withErrors(['tanggal_sampai' => 'Rentang tanggal maksimal 31 hari'])->withInput();
+        }
+
         $kasir = User::findOrFail($request->kasir_id);
-        $tanggal = Carbon::parse($request->tanggal)->setTimezone('Asia/Jakarta');
         $shift = $request->shift;
 
         // Define shift times
         $shiftTimes = [
-            1 => ['start' => '07:00:00', 'end' => '15:00:00'],
-            2 => ['start' => '15:00:00', 'end' => '23:00:00'],
-            3 => ['start' => '23:00:00', 'end' => '07:00:00'],
+            1 => ['start' => '07:00:00', 'end' => '15:59:59'],
+            2 => ['start' => '16:00:00', 'end' => '21:59:59'],
         ];
 
-        $startTime = $tanggal->copy()->setTimeFromTimeString($shiftTimes[$shift]['start']);
-        $endTime = $tanggal->copy()->setTimeFromTimeString($shiftTimes[$shift]['end']);
+        // Get sales data based on shift selection
+        $query = Penjualan::where('id_user', $kasir->id)
+            ->whereDate('created_at', '>=', $tanggalDari->toDateString())
+            ->whereDate('created_at', '<=', $tanggalSampai->toDateString());
 
-        // Adjust for overnight shift
-        if ($shift == 3) {
-            $endTime->addDay();
+        // Apply shift filter if specific shift is selected
+        if ($shift !== 'all') {
+            $startTime = $shiftTimes[$shift]['start'];
+            $endTime = $shiftTimes[$shift]['end'];
+
+            $query->whereTime('created_at', '>=', $startTime)
+                ->whereTime('created_at', '<=', $endTime);
         }
 
-        // Convert times to UTC for database query
-        $startTimeUTC = $startTime->utc();
-        $endTimeUTC = $endTime->utc();
+        $penjualan = $query->orderBy('created_at', 'asc')->get();
 
-        // Debug: Log the query parameters
-        \Log::info("Generating report for kasir_id: {$kasir->id}, start: {$startTimeUTC}, end: {$endTimeUTC}");
-
-        DB::enableQueryLog();
-
-        $penjualan = Penjualan::where('id_user', $kasir->id)
-            ->whereDate('created_at', $tanggal->toDateString())
-            ->get();
-
-        // Debug: Log the SQL query
-        \Log::info(DB::getQueryLog());
-
+        // Calculate totals
         $totalPenjualan = $penjualan->sum('total_harga');
         $jumlahTransaksi = $penjualan->count();
 
-        // Debug: Log the results
-        \Log::info("Found {$jumlahTransaksi} transactions, total: {$totalPenjualan}");
-
-        // Convert penjualan timestamps back to Asia/Jakarta timezone for display
-        $penjualan->transform(function ($item) {
-            $item->created_at = Carbon::parse($item->created_at)->setTimezone('Asia/Jakarta');
-            return $item;
+        // Group data by date for better reporting
+        $penjualanPerHari = $penjualan->groupBy(function ($item) {
+            return Carbon::parse($item->created_at)->format('Y-m-d');
         });
 
-        return view('laporan.kasir.report', compact('kasir', 'tanggal', 'shift', 'penjualan', 'totalPenjualan', 'jumlahTransaksi'));
+        // Calculate daily statistics
+        $statistikHarian = [];
+        foreach ($penjualanPerHari as $tanggal => $transaksiHarian) {
+            $statistikHarian[$tanggal] = [
+                'tanggal' => Carbon::parse($tanggal)->format('d F Y'),
+                'jumlah_transaksi' => $transaksiHarian->count(),
+                'total_penjualan' => $transaksiHarian->sum('total_harga'),
+                'rata_rata' => $transaksiHarian->count() > 0 ? $transaksiHarian->sum('total_harga') / $transaksiHarian->count() : 0,
+                'transaksi' => $transaksiHarian
+            ];
+        }
+
+        // Calculate shift statistics if specific shift selected
+        $statistikShift = null;
+        if ($shift !== 'all') {
+            $statistikShift = [
+                'shift' => $shift,
+                'waktu' => $shift == 1 ? '07:00 - 16:00' : '16:00 - 22:00',
+                'jumlah_hari' => $tanggalDari->diffInDays($tanggalSampai) + 1,
+                'rata_rata_harian' => $tanggalDari->diffInDays($tanggalSampai) + 1 > 0 ?
+                    $totalPenjualan / ($tanggalDari->diffInDays($tanggalSampai) + 1) : 0,
+            ];
+        }
+
+        return view('laporan.kasir.report', compact(
+            'kasir',
+            'tanggalDari',
+            'tanggalSampai',
+            'shift',
+            'penjualan',
+            'totalPenjualan',
+            'jumlahTransaksi',
+            'statistikHarian',
+            'statistikShift'
+        ));
     }
 }

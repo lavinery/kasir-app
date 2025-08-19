@@ -1,12 +1,12 @@
 @extends('layouts.master')
 
 @section('title')
-    Total Transaksi Member
+    Laporan Transaksi Member
 @endsection
 
 @section('breadcrumb')
     @parent
-    <li class="active">Total Transaksi Member</li>
+    <li class="active">Laporan Transaksi Member</li>
 @endsection
 
 @push('css')
@@ -98,6 +98,7 @@
         border-radius: 5px;
         overflow: hidden;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        position: relative;
     }
     
     .table-responsive {
@@ -216,62 +217,7 @@
         padding: 5px 12px;
     }
     
-    /* Modal styling */
-    .modal-lg {
-        width: 95%;
-        max-width: 1200px;
-    }
-    
-    #detail-table thead th {
-        background: #f8f9fa;
-        font-weight: 600;
-        text-align: center;
-        padding: 10px 5px;
-        font-size: 12px;
-        border: 1px solid #dee2e6;
-    }
-    
-    #detail-table tbody td {
-        padding: 8px 5px;
-        font-size: 12px;
-        border: 1px solid #dee2e6;
-        text-align: center;
-    }
-    
-    .member-detail-header {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 4px;
-        margin-bottom: 15px;
-    }
-    
-    .detail-summary {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-bottom: 15px;
-    }
-    
-    .detail-summary-item {
-        text-align: center;
-        min-width: 120px;
-    }
-    
-    .detail-summary-item .value {
-        font-size: 18px;
-        font-weight: bold;
-        color: #3c8dbc;
-        margin: 0;
-    }
-    
-    .detail-summary-item .label {
-        font-size: 12px;
-        color: #666;
-        margin: 5px 0 0 0;
-    }
-    
-    /* 🔄 NEW SYNC STYLES */
+    /* SYNC STYLES */
     .sync-status-bar {
         background: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -354,6 +300,61 @@
         background: linear-gradient(to right, #d4edda, #ffffff);
     }
     
+    /* Modal styling */
+    .modal-lg {
+        width: 95%;
+        max-width: 1200px;
+    }
+    
+    #detail-table thead th {
+        background: #f8f9fa;
+        font-weight: 600;
+        text-align: center;
+        padding: 10px 5px;
+        font-size: 12px;
+        border: 1px solid #dee2e6;
+    }
+    
+    #detail-table tbody td {
+        padding: 8px 5px;
+        font-size: 12px;
+        border: 1px solid #dee2e6;
+        text-align: center;
+    }
+    
+    .member-detail-header {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
+    
+    .detail-summary {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .detail-summary-item {
+        text-align: center;
+        min-width: 120px;
+    }
+    
+    .detail-summary-item .value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #3c8dbc;
+        margin: 0;
+    }
+    
+    .detail-summary-item .label {
+        font-size: 12px;
+        color: #666;
+        margin: 5px 0 0 0;
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
         .filter-row .col-md-3,
@@ -427,12 +428,17 @@
 <div class="row">
     <div class="col-lg-12">
         <div class="box">
-            {{-- 🔄 ENHANCED BOX HEADER DENGAN SYNC BUTTON --}}
             <div class="box-header with-border">
                 <h3 class="box-title">
-                    <i class="fa fa-line-chart"></i> Total Transaksi Member
+                    <i class="fa fa-line-chart"></i> Laporan Transaksi Member
                 </h3>
                 <div class="box-tools pull-right">
+                    {{-- Tombol Management Member --}}
+                    <a href="{{ route('member.index') }}" class="btn btn-sm btn-warning" 
+                       title="Kelola Data Member" data-toggle="tooltip">
+                        <i class="fa fa-users"></i> Kelola Member
+                    </a>
+                    
                     {{-- Enhanced Sync Button --}}
                     <button type="button" class="btn btn-sm btn-success" id="btn-refresh" 
                             title="Sinkronisasi Data (Ctrl+R)" data-toggle="tooltip">
@@ -454,10 +460,10 @@
             
             <div class="box-body">
                 
-                {{-- 🔄 ENHANCED ALERT CONTAINER --}}
+                {{-- ENHANCED ALERT CONTAINER --}}
                 <div id="alert-container"></div>
                 
-                {{-- 🔄 SYNC STATUS BAR (NEW) --}}
+                {{-- SYNC STATUS BAR --}}
                 <div class="sync-status-bar" id="sync-status" style="display: none;">
                     <div class="progress progress-xs">
                         <div class="progress-bar progress-bar-success progress-bar-striped active" 
@@ -584,6 +590,205 @@
                             <h3 class="number" id="total-items">0</h3>
                             <p class="label">Total Item Terjual</p>
                         </div>
+                    </div>
+                </div>
+
+                {{-- ENHANCED EXPORT SECTION --}}
+                <div class="export-section">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 style="margin-top: 0;">
+                                <i class="fa fa-download"></i> Export Data
+                            </h5>
+                            <button type="button" id="btn-export-csv" class="btn btn-success btn-export" 
+                                    data-toggle="tooltip" title="Export ke format CSV/Excel">
+                                <i class="fa fa-file-excel-o"></i> Export ke CSV
+                            </button>
+                            <button type="button" id="btn-export-pdf" class="btn btn-danger btn-export"
+                                    data-toggle="tooltip" title="Export ke format PDF">
+                                <i class="fa fa-file-pdf-o"></i> Export ke PDF
+                            </button>
+                            <small class="text-muted">
+                                <i class="fa fa-info-circle"></i> 
+                                Export akan mengunduh data sesuai dengan filter yang sedang aktif
+                            </small>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            {{-- Data Status Info --}}
+                            <div class="data-status-info">
+                                <h6 style="margin-bottom: 5px;">Status Data</h6>
+                                <div id="data-status" class="text-muted">
+                                    <i class="fa fa-circle text-success"></i> Real-time
+                                    <br>
+                                    <small id="last-sync-info">Belum ada sinkronisasi</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table Container -->
+                <div class="table-container">
+                    <div class="loading-overlay" id="table-loading">
+                        <div class="loading-spinner">
+                            <i class="fa fa-spinner fa-spin"></i> Memuat data...
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover" id="member-stats-table">
+                            <thead>
+                                <tr>
+                                    <th width="4%">No</th>
+                                    <th width="12%">Kode Member</th>
+                                    <th width="18%">Nama Member</th>
+                                    <th width="12%">Telepon</th>
+                                    <th width="10%">Total Transaksi</th>
+                                    <th width="15%">Total Belanja</th>
+                                    <th width="13%">Rata-rata Order (AOV)</th>
+                                    <th width="8%">Total Item</th>
+                                    <th width="12%">Transaksi Terakhir</th>
+                                    <th width="8%">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data akan dimuat via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Transaksi -->
+<div class="modal fade" id="modal-detail" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    <i class="fa fa-list-alt"></i> Detail Transaksi Member
+                </h4>
+            </div>
+            <div class="modal-body">
+                <!-- Member Info Header -->
+                <div class="member-detail-header" id="member-info">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 id="member-name" style="margin: 0; color: #333;"></h5>
+                            <p id="member-code" style="margin: 5px 0 0 0; color: #666;"></p>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <p id="member-phone" style="margin: 0; color: #666;"></p>
+                            <p id="filter-period" style="margin: 5px 0 0 0; color: #666; font-size: 12px;"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Detail Summary -->
+                <div class="detail-summary" id="detail-summary">
+                    <div class="detail-summary-item">
+                        <h4 class="value" id="detail-total-transactions">0</h4>
+                        <p class="label">Total Transaksi</p>
+                    </div>
+                    <div class="detail-summary-item">
+                        <h4 class="value" id="detail-total-amount">Rp 0</h4>
+                        <p class="label">Total Belanja</p>
+                    </div>
+                    <div class="detail-summary-item">
+                        <h4 class="value" id="detail-avg-amount">Rp 0</h4>
+                        <p class="label">Rata-rata Order</p>
+                    </div>
+                    <div class="detail-summary-item">
+                        <h4 class="value" id="detail-total-items">0</h4>
+                        <p class="label">Total Item</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- Transaction Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="detail-table">
+                        <thead>
+                            <tr>
+                                <th width="5%">No</th>
+                                <th width="15%">Tanggal</th>
+                                <th width="12%">No. Transaksi</th>
+                                <th width="10%">Total Item</th>
+                                <th width="15%">Total Belanja</th>
+                                <th width="12%">Diskon</th>
+                                <th width="15%">Total Bayar</th>
+                                <th width="16%">Kasir</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data detail akan dimuat via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">
+                    <i class="fa fa-times"></i> Tutup
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-print-detail">
+                    <i class="fa fa-print"></i> Cetak Detail
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Help -->
+<div class="modal fade" id="modal-help" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    <i class="fa fa-question-circle"></i> Panduan Penggunaan
+                </h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h5><i class="fa fa-filter"></i> Filter Data</h5>
+                        <ul>
+                            <li><strong>Periode:</strong> Pilih rentang tanggal untuk analisis (maksimal 1 tahun)</li>
+                            <li><strong>Min. Transaksi:</strong> Tampilkan member dengan minimal N transaksi</li>
+                            <li><strong>Min. Belanja:</strong> Tampilkan member dengan minimal total belanja tertentu</li>
+                            <li><strong>Tampilkan Semua Member:</strong> Termasuk member tanpa transaksi dalam periode</li>
+                        </ul>
+                        
+                        <h5><i class="fa fa-table"></i> Kolom Data</h5>
+                        <ul>
+                            <li><strong>Total Transaksi:</strong> Jumlah transaksi PAID dalam periode</li>
+                            <li><strong>Total Belanja:</strong> Total nilai pembelian</li>
+                            <li><strong>AOV:</strong> Average Order Value (rata-rata nilai per transaksi)</li>
+                            <li><strong>Total Item:</strong> Total kuantitas barang dibeli</li>
+                        </ul>
+                        
+                        <h5><i class="fa fa-download"></i> Export</h5>
+                        <ul>
+                            <li><strong>CSV:</strong> Format spreadsheet untuk analisis lanjutan</li>
+                            <li><strong>PDF:</strong> Format laporan siap cetak</li>
+                        </ul>
+                        
+                        <h5><i class="fa fa-refresh"></i> Sync Data</h5>
+                        <ul>
+                            <li><strong>Sync Button:</strong> Klik untuk memperbarui data secara manual</li>
+                            <li><strong>Keyboard:</strong> Tekan Ctrl+R atau F5 untuk sync cepat</li>
+                            <li><strong>Auto-refresh:</strong> Summary ter-update otomatis setiap 30 detik</li>
+                        </ul>
+                        
+                        <h5><i class="fa fa-users"></i> Kelola Member</h5>
+                        <ul>
+                            <li><strong>Tombol Kelola Member:</strong> Klik untuk menambah/edit/hapus data member</li>
+                            <li><strong>Akses:</strong> Admin dan Kasir dapat mengelola data member</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -803,7 +1008,7 @@
             resetFilter();
         });
         
-        // 🔄 Enhanced Refresh button with sync capability
+        // Enhanced Refresh button with sync capability
         $('#btn-refresh').on('click', function() {
             performSync();
         });
@@ -872,7 +1077,7 @@
             printDetailTransactions();
         });
         
-        // 🔄 Keyboard shortcut for sync (Ctrl+R or F5)
+        // Keyboard shortcut for sync (Ctrl+R or F5)
         $(document).keydown(function(e) {
             // Ctrl+R or F5 untuk sync
             if ((e.ctrlKey && e.keyCode === 82) || e.keyCode === 116) {
@@ -883,7 +1088,7 @@
         });
     }
 
-    // 🔄 ENHANCED SYNC FUNCTIONS
+    // ENHANCED SYNC FUNCTIONS
     function performSync() {
         if (syncInProgress) {
             showAlert('warning', 'Sinkronisasi sedang berlangsung, mohon tunggu...');
@@ -957,7 +1162,7 @@
         });
     }
 
-    // 🔄 SYNC UI FUNCTIONS
+    // SYNC UI FUNCTIONS
     function showSyncProgress() {
         $('#sync-status').fadeIn();
         $('#sync-status-text').text('Memulai sinkronisasi data...');
@@ -1006,7 +1211,7 @@
         $('#last-sync-info').text('Sync gagal - coba lagi');
     }
 
-    // 🔄 REAL-TIME SUMMARY FUNCTIONS
+    // REAL-TIME SUMMARY FUNCTIONS
     function loadRealTimeSummary() {
         if (Object.keys(currentFilters).length === 0) return;
         
@@ -1282,7 +1487,7 @@
         return new Intl.NumberFormat('id-ID').format(number);
     }
 
-    // 🔧 System status check (untuk debugging)
+    // System status check (untuk debugging)
     function checkSystemStatus() {
         $.ajax({
             url: '{{ route('member_stats.system_status') }}',
@@ -1314,198 +1519,4 @@
         $('[data-toggle="tooltip"]').tooltip();
     });
 </script>
-@endpush>
-
-                {{-- 🔄 ENHANCED EXPORT SECTION DENGAN SYNC INFO --}}
-                <div class="export-section">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h5 style="margin-top: 0;">
-                                <i class="fa fa-download"></i> Export Data
-                            </h5>
-                            <button type="button" id="btn-export-csv" class="btn btn-success btn-export" 
-                                    data-toggle="tooltip" title="Export ke format CSV/Excel">
-                                <i class="fa fa-file-excel-o"></i> Export ke CSV
-                            </button>
-                            <button type="button" id="btn-export-pdf" class="btn btn-danger btn-export"
-                                    data-toggle="tooltip" title="Export ke format PDF">
-                                <i class="fa fa-file-pdf-o"></i> Export ke PDF
-                            </button>
-                            <small class="text-muted">
-                                <i class="fa fa-info-circle"></i> 
-                                Export akan mengunduh data sesuai dengan filter yang sedang aktif
-                            </small>
-                        </div>
-                        <div class="col-md-4 text-right">
-                            {{-- Data Status Info --}}
-                            <div class="data-status-info">
-                                <h6 style="margin-bottom: 5px;">Status Data</h6>
-                                <div id="data-status" class="text-muted">
-                                    <i class="fa fa-circle text-success"></i> Real-time
-                                    <br>
-                                    <small id="last-sync-info">Belum ada sinkronisasi</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Data Table Container -->
-                <div class="table-container">
-                    <div class="loading-overlay" id="table-loading">
-                        <div class="loading-spinner">
-                            <i class="fa fa-spinner fa-spin"></i> Memuat data...
-                        </div>
-                    </div>
-                    
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-hover" id="member-stats-table">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th width="12%">Kode Member</th>
-                                    <th width="18%">Nama Member</th>
-                                    <th width="12%">Telepon</th>
-                                    <th width="10%">Total Transaksi</th>
-                                    <th width="15%">Total Belanja</th>
-                                    <th width="13%">Rata-rata Order (AOV)</th>
-                                    <th width="8%">Total Item</th>
-                                    <th width="12%">Transaksi Terakhir</th>
-                                    <th width="8%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data akan dimuat via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Detail Transaksi -->
-<div class="modal fade" id="modal-detail" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">
-                    <i class="fa fa-list-alt"></i> Detail Transaksi Member
-                </h4>
-            </div>
-            <div class="modal-body">
-                <!-- Member Info Header -->
-                <div class="member-detail-header" id="member-info">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5 id="member-name" style="margin: 0; color: #333;"></h5>
-                            <p id="member-code" style="margin: 5px 0 0 0; color: #666;"></p>
-                        </div>
-                        <div class="col-md-6 text-right">
-                            <p id="member-phone" style="margin: 0; color: #666;"></p>
-                            <p id="filter-period" style="margin: 5px 0 0 0; color: #666; font-size: 12px;"></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Detail Summary -->
-                <div class="detail-summary" id="detail-summary">
-                    <div class="detail-summary-item">
-                        <h4 class="value" id="detail-total-transactions">0</h4>
-                        <p class="label">Total Transaksi</p>
-                    </div>
-                    <div class="detail-summary-item">
-                        <h4 class="value" id="detail-total-amount">Rp 0</h4>
-                        <p class="label">Total Belanja</p>
-                    </div>
-                    <div class="detail-summary-item">
-                        <h4 class="value" id="detail-avg-amount">Rp 0</h4>
-                        <p class="label">Rata-rata Order</p>
-                    </div>
-                    <div class="detail-summary-item">
-                        <h4 class="value" id="detail-total-items">0</h4>
-                        <p class="label">Total Item</p>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <!-- Transaction Table -->
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered" id="detail-table">
-                        <thead>
-                            <tr>
-                                <th width="5%">No</th>
-                                <th width="15%">Tanggal</th>
-                                <th width="12%">No. Transaksi</th>
-                                <th width="10%">Total Item</th>
-                                <th width="15%">Total Belanja</th>
-                                <th width="12%">Diskon</th>
-                                <th width="15%">Total Bayar</th>
-                                <th width="16%">Kasir</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Data detail akan dimuat via AJAX -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">
-                    <i class="fa fa-times"></i> Tutup
-                </button>
-                <button type="button" class="btn btn-primary" id="btn-print-detail">
-                    <i class="fa fa-print"></i> Cetak Detail
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Help -->
-<div class="modal fade" id="modal-help" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">
-                    <i class="fa fa-question-circle"></i> Panduan Penggunaan
-                </h4>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <h5><i class="fa fa-filter"></i> Filter Data</h5>
-                        <ul>
-                            <li><strong>Periode:</strong> Pilih rentang tanggal untuk analisis (maksimal 1 tahun)</li>
-                            <li><strong>Min. Transaksi:</strong> Tampilkan member dengan minimal N transaksi</li>
-                            <li><strong>Min. Belanja:</strong> Tampilkan member dengan minimal total belanja tertentu</li>
-                            <li><strong>Tampilkan Semua Member:</strong> Termasuk member tanpa transaksi dalam periode</li>
-                        </ul>
-                        
-                        <h5><i class="fa fa-table"></i> Kolom Data</h5>
-                        <ul>
-                            <li><strong>Total Transaksi:</strong> Jumlah transaksi PAID dalam periode</li>
-                            <li><strong>Total Belanja:</strong> Total nilai pembelian</li>
-                            <li><strong>AOV:</strong> Average Order Value (rata-rata nilai per transaksi)</li>
-                            <li><strong>Total Item:</strong> Total kuantitas barang dibeli</li>
-                        </ul>
-                        
-                        <h5><i class="fa fa-download"></i> Export</h5>
-                        <ul>
-                            <li><strong>CSV:</strong> Format spreadsheet untuk analisis lanjutan</li>
-                            <li><strong>PDF:</strong> Format laporan siap cetak</li>
-                        </ul>
-                        
-                        <h5><i class="fa fa-refresh"></i> Sync Data</h5>
-                        <ul>
-                            <li><strong>Sync Button:</strong> Klik untuk memperbarui data secara manual</li>
-                            <li><strong>Keyboard:</strong> Tekan Ctrl+R atau F5 untuk sync cepat</li>
-                            <li><strong>Auto-refresh:</strong> Summary ter-update otomatis setiap 30 detik</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>  
+@endpush

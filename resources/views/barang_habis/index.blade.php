@@ -641,7 +641,7 @@ function refreshTable() {
 
 function syncAndRefresh() {
     // Konfirmasi user
-    if (!confirm('Sinkronisasi akan:\n• Menambah produk dengan stok ≤ 10 ke daftar\n• Menghapus produk auto dengan stok > 10 dari daftar\n\nLanjutkan?')) {
+    if (!confirm('Sinkronisasi akan:\n• Menambah produk dengan stok ≤ 5 ke daftar\n• Menghapus produk auto dengan stok > 5 dari daftar\n\nLanjutkan?')) {
         return;
     }
 

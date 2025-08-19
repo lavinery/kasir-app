@@ -28,6 +28,7 @@ class PembelianDetailController extends Controller
     {
         $detail = PembelianDetail::with('produk')
             ->where('id_pembelian', $id)
+            ->orderBy('id_pembelian_detail', 'desc') // data terbaru di atas
             ->get();
         $data = array();
         $total = 0;
@@ -35,13 +36,13 @@ class PembelianDetailController extends Controller
 
         foreach ($detail as $item) {
             $row = array();
-            $row['kode_produk'] = '<span class="label label-success">'. $item->produk['kode_produk'] .'</span';
+            $row['kode_produk'] = '<span class="label label-success">' . $item->produk['kode_produk'] . '</span>';
             $row['nama_produk'] = $item->produk['nama_produk'];
-            $row['harga_beli']  = 'Rp. '. format_uang($item->harga_beli);
-            $row['jumlah']      = '<input type="number" class="form-control input-sm quantity" data-id="'. $item->id_pembelian_detail .'" value="'. $item->jumlah .'">';
-            $row['subtotal']    = 'Rp. '. format_uang($item->subtotal);
+            $row['harga_beli']  = 'Rp. ' . format_uang($item->harga_beli);
+            $row['jumlah']      = '<input type="number" class="form-control input-sm quantity" data-id="' . $item->id_pembelian_detail . '" value="' . $item->jumlah . '">';
+            $row['subtotal']    = 'Rp. ' . format_uang($item->subtotal);
             $row['aksi']        = '<div class="btn-group">
-                                    <button onclick="deleteData(`'. route('pembelian_detail.destroy', $item->id_pembelian_detail) .'`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
+                                    <button onclick="deleteData(`' . route('pembelian_detail.destroy', $item->id_pembelian_detail) . '`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
                                 </div>';
             $data[] = $row;
 
@@ -50,8 +51,8 @@ class PembelianDetailController extends Controller
         }
         $data[] = [
             'kode_produk' => '
-                <div class="total hide">'. $total .'</div>
-                <div class="total_item hide">'. $total_item .'</div>',
+                <div class="total hide">' . $total . '</div>
+                <div class="total_item hide">' . $total_item . '</div>',
             'nama_produk' => '',
             'harga_beli'  => '',
             'jumlah'      => '',
@@ -68,18 +69,39 @@ class PembelianDetailController extends Controller
 
     public function store(Request $request)
     {
-        $produk = Produk::where('id_produk', $request->id_produk)->first();
-        if (! $produk) {
-            return response()->json('Data gagal disimpan', 400);
+        // TAMBAHAN: Support untuk input kode_produk dari keyboard (Enter key)
+        if ($request->has('kode_produk') && $request->kode_produk) {
+            // Jika input dari kode produk (keyboard/scanner)
+            $produk = Produk::where('kode_produk', $request->kode_produk)->first();
+        } else {
+            // Jika input dari modal (pilih produk manual)
+            $produk = Produk::where('id_produk', $request->id_produk)->first();
         }
 
-        $detail = new PembelianDetail();
-        $detail->id_pembelian = $request->id_pembelian;
-        $detail->id_produk = $produk->id_produk;
-        $detail->harga_beli = $produk->harga_beli;
-        $detail->jumlah = 1;
-        $detail->subtotal = $produk->harga_beli;
-        $detail->save();
+        if (! $produk) {
+            return response()->json('Produk tidak ditemukan', 404);
+        }
+
+        // TAMBAHAN: Cek apakah produk sudah ada, jika ya tambah quantity
+        $existing = PembelianDetail::where('id_pembelian', $request->id_pembelian)
+            ->where('id_produk', $produk->id_produk)
+            ->first();
+
+        if ($existing) {
+            // Jika produk sudah ada, tambah jumlahnya
+            $existing->jumlah += 1;
+            $existing->subtotal = $existing->harga_beli * $existing->jumlah;
+            $existing->update();
+        } else {
+            // Jika produk belum ada, buat entry baru
+            $detail = new PembelianDetail();
+            $detail->id_pembelian = $request->id_pembelian;
+            $detail->id_produk = $produk->id_produk;
+            $detail->harga_beli = $produk->harga_beli;
+            $detail->jumlah = 1;
+            $detail->subtotal = $produk->harga_beli;
+            $detail->save();
+        }
 
         return response()->json('Data berhasil disimpan', 200);
     }
@@ -107,7 +129,7 @@ class PembelianDetailController extends Controller
             'totalrp' => format_uang($total),
             'bayar' => $bayar,
             'bayarrp' => format_uang($bayar),
-            'terbilang' => ucwords(terbilang($bayar). ' Rupiah')
+            'terbilang' => ucwords(terbilang($bayar) . ' Rupiah')
         ];
 
         return response()->json($data);

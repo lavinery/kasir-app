@@ -145,7 +145,7 @@
                                 <td>{{ $item->produk->nama_produk ?? '-' }}</td>
                                 <td>{{ $item->produk->merk ?? '-' }}</td>
                                 <td class="text-center">
-                                    @if(isset($item->produk) && $item->produk->stok <= 10)
+                                    @if(isset($item->produk) && $item->produk->stok <= 5)
                                         <strong>{{ $item->produk->stok }}</strong>
                                     @else
                                         {{ $item->produk->stok ?? 0 }}

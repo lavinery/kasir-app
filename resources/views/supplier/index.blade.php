@@ -14,17 +14,22 @@
     <div class="col-lg-12">
         <div class="box">
             <div class="box-header with-border">
-                <button onclick="addForm('{{ route('supplier.store') }}')" class="btn btn-success btn-xs btn-flat"><i class="fa fa-plus-circle"></i> Tambah</button>
+                <button onclick="addForm('{{ route('supplier.store') }}')" class="btn btn-success btn-xs btn-flat">
+                    <i class="fa fa-plus-circle"></i> Tambah
+                </button>
             </div>
             <div class="box-body table-responsive">
                 <table class="table table-stiped table-bordered">
                     <thead>
-                        <th width="5%">No</th>
-                        <th>Nama</th>
-                        <th>Telepon</th>
-                        <th>Alamat</th>
-                        <th width="15%"><i class="fa fa-cog"></i></th>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Nama</th>
+                            <th>Telepon</th>
+                            <th>Alamat</th>
+                            <th width="15%"><i class="fa fa-cog"></i></th>
+                        </tr>
                     </thead>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -39,35 +44,58 @@
     let table;
 
     $(function () {
+        // Setup CSRF untuk semua request AJAX
+        $.ajaxSetup({
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        // DataTable
         table = $('.table').DataTable({
             responsive: true,
             processing: true,
             serverSide: true,
             autoWidth: false,
-            ajax: {
-                url: '{{ route('supplier.data') }}',
-            },
+            ajax: { url: '{{ route('supplier.data') }}' },
             columns: [
-                {data: 'DT_RowIndex', searchable: false, sortable: false},
+                {data: 'DT_RowIndex', searchable: false, orderable: false},
                 {data: 'nama'},
                 {data: 'telepon'},
                 {data: 'alamat'},
-                {data: 'aksi', searchable: false, sortable: false},
-            ]
+                {data: 'aksi', searchable: false, orderable: false},
+            ],
+            language: {
+                processing: "Memuat data...",
+                lengthMenu: "Tampilkan _MENU_ data per halaman",
+                zeroRecords: "Tidak ada data supplier",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(disaring dari _MAX_ total data)",
+                search: "Cari:",
+                paginate: { first: "Pertama", last: "Terakhir", next: "Selanjutnya", previous: "Sebelumnya" }
+            }
         });
 
-        $('#modal-form').validator().on('submit', function (e) {
-            if (! e.preventDefault()) {
-                $.post($('#modal-form form').attr('action'), $('#modal-form form').serialize())
-                    .done((response) => {
-                        $('#modal-form').modal('hide');
-                        table.ajax.reload();
-                    })
-                    .fail((errors) => {
-                        alert('Tidak dapat menyimpan data');
-                        return;
-                    });
-            }
+        // Submit form modal (create & update) via AJAX
+        const $form = $('#modal-form form');
+        $form.on('submit', function (e) {
+            e.preventDefault();
+
+            $.post($form.attr('action'), $form.serialize())
+                .done(function () {
+                    $('#modal-form').modal('hide');
+                    table.ajax.reload(null, false);
+                    alert('Data berhasil disimpan!');
+                })
+                .fail(function (xhr) {
+                    let msg = 'Tidak dapat menyimpan data';
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        const firstErr = Object.values(xhr.responseJSON.errors)[0][0];
+                        msg = firstErr || msg;
+                    }
+                    alert(msg);
+                });
+
+            return false;
         });
     });
 
@@ -75,9 +103,10 @@
         $('#modal-form').modal('show');
         $('#modal-form .modal-title').text('Tambah Supplier');
 
-        $('#modal-form form')[0].reset();
-        $('#modal-form form').attr('action', url);
-        $('#modal-form [name=_method]').val('post');
+        const $f = $('#modal-form form');
+        $f[0].reset();
+        $f.attr('action', url);
+        $f.find('[name=_method]').val('post');
         $('#modal-form [name=nama]').focus();
     }
 
@@ -85,35 +114,32 @@
         $('#modal-form').modal('show');
         $('#modal-form .modal-title').text('Edit Supplier');
 
-        $('#modal-form form')[0].reset();
-        $('#modal-form form').attr('action', url);
-        $('#modal-form [name=_method]').val('put');
-        $('#modal-form [name=nama]').focus();
+        const $f = $('#modal-form form');
+        $f[0].reset();
+        $f.attr('action', url.replace('/show', '')); // jaga-jaga kalau route('supplier.show', id) dipakai; action tetap ke /supplier/{id}
+        $f.find('[name=_method]').val('put');
 
+        // Ambil data untuk prefill (harus GET ke supplier.show)
         $.get(url)
             .done((response) => {
                 $('#modal-form [name=nama]').val(response.nama);
                 $('#modal-form [name=telepon]').val(response.telepon);
                 $('#modal-form [name=alamat]').val(response.alamat);
             })
-            .fail((errors) => {
+            .fail(() => {
                 alert('Tidak dapat menampilkan data');
-                return;
             });
     }
 
     function deleteData(url) {
         if (confirm('Yakin ingin menghapus data terpilih?')) {
-            $.post(url, {
-                    '_token': $('[name=csrf-token]').attr('content'),
-                    '_method': 'delete'
+            $.post(url, { _method: 'delete' })
+                .done(() => {
+                    table.ajax.reload(null, false);
+                    alert('Data berhasil dihapus!');
                 })
-                .done((response) => {
-                    table.ajax.reload();
-                })
-                .fail((errors) => {
+                .fail(() => {
                     alert('Tidak dapat menghapus data');
-                    return;
                 });
         }
     }
