@@ -18,17 +18,19 @@
                     <i class="fa fa-plus-circle"></i> Tambah
                 </button>
             </div>
-            <div class="box-body table-responsive">
-                <table class="table table-stiped table-bordered">
-                    <thead>
-                        <tr>
-                            <th width="5%">No</th>
-                            <th>Kategori</th>
-                            <th width="15%"><i class="fa fa-cog"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="box-body">
+                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="table table-stiped table-bordered" style="min-width: 400px;">
+                        <thead>
+                            <tr>
+                                <th width="5%">No</th>
+                                <th>Kategori</th>
+                                <th width="15%"><i class="fa fa-cog"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -49,15 +51,17 @@
 
         // DataTable
         table = $('.table').DataTable({
-            responsive: true,
+            responsive: false, // Disable responsive untuk scroll horizontal
             processing: true,
             serverSide: true,
             autoWidth: false,
+            scrollX: true, // Enable horizontal scroll
+            scrollCollapse: true,
             ajax: { url: '{{ route('kategori.data') }}' },
             columns: [
-                {data: 'DT_RowIndex', searchable: false, orderable: false},
-                {data: 'nama_kategori'},
-                {data: 'aksi', searchable: false, orderable: false},
+                {data: 'DT_RowIndex', searchable: false, orderable: false, width: '50px'},
+                {data: 'nama_kategori', width: '200px'},
+                {data: 'aksi', searchable: false, orderable: false, width: '120px'},
             ],
             language: {
                 processing: "Memuat data...",

@@ -494,8 +494,8 @@ class BarangHabisController extends Controller
     public function getSyncStats(Request $request)
     {
         try {
-            // Ambil threshold dari request atau default 5
-            $threshold = $request->input('threshold', 5);
+            // Ambil threshold dari config atau request
+            $threshold = $request->input('threshold', config('app.stock_threshold', 5));
 
             $stats = [
                 'total_barang_habis' => BarangHabis::count(),
@@ -511,7 +511,9 @@ class BarangHabisController extends Controller
                         $query->where('stok', '>', $threshold);
                     })->count(),
                 'threshold' => $threshold,
-                'needs_sync' => false
+                'needs_sync' => false,
+                'auto_sync_enabled' => true, // Auto sync sudah aktif
+                'last_auto_sync' => $this->getLastAutoSyncTime()
             ];
 
             // Tentukan apakah perlu sync
@@ -529,6 +531,28 @@ class BarangHabisController extends Controller
                 'message' => 'Error getting stats: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get last auto sync time from logs
+     */
+    private function getLastAutoSyncTime()
+    {
+        // Cek dari log terbaru
+        $logFile = storage_path('logs/laravel.log');
+        if (file_exists($logFile)) {
+            $logs = file_get_contents($logFile);
+            if (preg_match('/Auto (added|removed) to barang habis.*?(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $logs, $matches)) {
+                return $matches[2];
+            }
+        }
+        
+        // Fallback: cek dari data barang habis terbaru
+        $latestAuto = BarangHabis::where('tipe', 'auto')
+            ->orderBy('created_at', 'desc')
+            ->first();
+            
+        return $latestAuto ? $latestAuto->created_at->format('Y-m-d H:i:s') : 'Belum pernah';
     }
 
     /**

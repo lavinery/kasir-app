@@ -38,6 +38,56 @@
         href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic">
 
     @stack('css')
+
+    <!-- Mobile Responsive CSS -->
+    <style>
+        /* Mobile responsive untuk tabel */
+        @media (max-width: 768px) {
+            .table-responsive {
+                border: 0;
+                margin-bottom: 0;
+            }
+            
+            .table-responsive .table {
+                margin-bottom: 0;
+            }
+            
+            /* Pastikan scroll horizontal smooth di mobile */
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+                overflow-x: auto;
+            }
+            
+            /* Optimasi untuk layar kecil */
+            .box-body {
+                padding: 10px;
+            }
+            
+            /* Button group responsive */
+            .btn-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+                min-width: auto;
+            }
+        }
+        
+        /* DataTables scroll horizontal */
+        .dataTables_wrapper .dataTables_scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Pastikan tabel tidak terpotong */
+        .dataTables_scrollBody {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
 </head>
 <body class="hold-transition skin-purple-light sidebar-mini">
     <div class="wrapper">

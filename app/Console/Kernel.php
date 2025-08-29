@@ -25,6 +25,13 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        
+        // Auto sync barang habis setiap jam (opsional)
+        // Uncomment jika ingin auto sync terjadwal
+        // $schedule->command('barang-habis:sync')
+        //     ->hourly()
+        //     ->withoutOverlapping()
+        //     ->appendOutputTo(storage_path('logs/barang-habis-sync.log'));
     }
 
     /**

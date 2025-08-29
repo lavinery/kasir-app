@@ -113,6 +113,9 @@
                     <span id="sync-status" class="label label-default">
                         <i class="fa fa-clock-o"></i> Belum pernah sync
                     </span>
+                    <span id="auto-sync-status" class="label label-success" style="margin-left: 10px;">
+                        <i class="fa fa-check-circle"></i> Auto Sync Aktif
+                    </span>
                 </div>
             </div>
             <div class="box-body">
@@ -170,24 +173,26 @@
                 </div>
 
                 <!-- Table -->
-                <table class="table table-striped table-bordered table-hover" id="table-barang-habis">
-                    <thead>
-                        <tr>
-                            <th width="3%">
-                                <input type="checkbox" id="select-all">
-                            </th>
-                            <th width="5%">No</th>
-                            <th>Kategori</th>
-                            <th>Nama Produk</th>
-                            <th>Merk</th>
-                            <th width="8%">Stok</th>
-                            <th>Keterangan</th>
-                            <th width="8%">Sumber</th>
-                            <th width="12%">Tanggal</th>
-                            <th width="10%"><i class="fa fa-cog"></i></th>
-                        </tr>
-                    </thead>
-                </table>
+                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="table table-striped table-bordered table-hover" id="table-barang-habis" style="min-width: 900px;">
+                        <thead>
+                            <tr>
+                                <th width="3%">
+                                    <input type="checkbox" id="select-all">
+                                </th>
+                                <th width="5%">No</th>
+                                <th>Kategori</th>
+                                <th>Nama Produk</th>
+                                <th>Merk</th>
+                                <th width="8%">Stok</th>
+                                <th>Keterangan</th>
+                                <th width="8%">Sumber</th>
+                                <th width="12%">Tanggal</th>
+                                <th width="10%"><i class="fa fa-cog"></i></th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -285,7 +290,9 @@ $(function () {
         processing: true,
         serverSide: true,
         autoWidth: false,
-        responsive: true,
+        responsive: false, // Disable responsive untuk scroll horizontal
+        scrollX: true, // Enable horizontal scroll
+        scrollCollapse: true,
         ajax: {
             url: '{{ route("barang_habis.data") }}',
             data: function (d) {
@@ -300,19 +307,20 @@ $(function () {
                 name: 'checkbox',
                 orderable: false,
                 searchable: false,
+                width: '50px',
                 render: function(data, type, row) {
                     return '<input type="checkbox" class="item-checkbox" value="' + data + '">';
                 }
             },
-            {data: 'DT_RowIndex', searchable: false, sortable: false},
-            {data: 'kategori'},
-            {data: 'nama_produk'},
-            {data: 'merk'},
-            {data: 'stok', className: 'text-center'},
-            {data: 'keterangan'},
-            {data: 'tipe', className: 'text-center'},
-            {data: 'created_at', className: 'text-center'},
-            {data: 'action', searchable: false, sortable: false, className: 'text-center'},
+            {data: 'DT_RowIndex', searchable: false, sortable: false, width: '50px'},
+            {data: 'kategori', width: '120px'},
+            {data: 'nama_produk', width: '200px'},
+            {data: 'merk', width: '100px'},
+            {data: 'stok', className: 'text-center', width: '80px'},
+            {data: 'keterangan', width: '200px'},
+            {data: 'tipe', className: 'text-center', width: '80px'},
+            {data: 'created_at', className: 'text-center', width: '120px'},
+            {data: 'action', searchable: false, sortable: false, className: 'text-center', width: '120px'},
         ],
         order: [[8, 'desc']], // Sort by created_at
         pageLength: 25,
@@ -631,8 +639,6 @@ function showAlert(type, message) {
         $('.alert').fadeOut();
     }, 5000);
 
-    // Tambahkan functions ini di bagian script
-
 function refreshTable() {
     table.ajax.reload(null, false); // false = keep current page
     updateSyncStatus('refresh', 'Tabel di-refresh');
@@ -640,77 +646,7 @@ function refreshTable() {
 }
 
 function syncAndRefresh() {
-    // Auto hide after 8 seconds for success/info, 12 seconds for errors
-    let hideDelay = (type === 'error') ? 12000 : 8000;
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, hideDelay);
-}
-
-// TAMBAHAN: Function untuk test koneksi sync
-function testSync() {
-    $.ajax({
-        url: '{{ route("barang_habis.sync_stats") }}',
-        type: 'GET',
-        success: function(response) {
-            if (response.success) {
-                showAlert('success', '✅ Koneksi sync berfungsi normal');
-            } else {
-                showAlert('error', '❌ Koneksi sync bermasalah');
-            }
-        },
-        error: function(xhr) {
-            showAlert('error', '❌ Tidak dapat terhubung ke server sync');
-        }
-    });
-}
-
-// TAMBAHAN: Function untuk force refresh dengan loading indicator
-function forceRefreshWithSync() {
-    // Show loading overlay
-    if (!$('.loading-overlay').length) {
-        $('body').append(`
-            <div class="loading-overlay" style="
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background: rgba(0,0,0,0.5); z-index: 9999; display: flex; 
-                align-items: center; justify-content: center; color: white;
-            ">
-                <div style="text-align: center;">
-                    <i class="fa fa-spinner fa-spin" style="font-size: 3em; margin-bottom: 20px;"></i>
-                    <div style="font-size: 1.2em;">Sedang Sinkronisasi...</div>
-                    <div style="font-size: 0.9em; margin-top: 10px;">Mohon tunggu sebentar</div>
-                </div>
-            </div>
-        `);
-    }
-
-    // Run sync first, then refresh
-    $.ajax({
-        url: '{{ route("barang_habis.sync") }}',
-        type: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
-        data: { threshold: 5 },
-        success: function(response) {
-            if (response.success) {
-                // Refresh table
-                table.ajax.reload(function() {
-                    $('.loading-overlay').remove();
-                    updateSyncStatus('success', 'Sync + Refresh selesai');
-                    showAlert('success', 'Sinkronisasi dan refresh berhasil!');
-                });
-            } else {
-                $('.loading-overlay').remove();
-                showAlert('error', 'Sync gagal: ' + response.message);
-            }
-        },
-        error: function(xhr) {
-            $('.loading-overlay').remove();
-            showAlert('error', 'Error saat sinkronisasi');
-        }
-    });
-} Konfirmasi user
+    // Konfirmasi user
     if (!confirm('Sinkronisasi akan:\n• Menambah produk dengan stok ≤ 5 ke daftar\n• Menghapus produk auto dengan stok > 5 dari daftar\n\nLanjutkan?')) {
         return;
     }
@@ -789,6 +725,10 @@ function showSyncStats() {
                 let message = `
                     <div style="text-align: left;">
                         <strong>📊 Status Sinkronisasi (Threshold: ${stats.threshold})</strong><br><br>
+                        <strong>🔄 Auto Sync:</strong><br>
+                        • Status: <span style="color: #00a65a">✅ Aktif</span><br>
+                        • Terakhir Sync: <strong>${stats.last_auto_sync}</strong><br><br>
+                        
                         <strong>Data Saat Ini:</strong><br>
                         • Total Barang Habis: <strong>${stats.total_barang_habis}</strong><br>
                         • Entry Auto: <strong>${stats.auto_entries}</strong><br>
@@ -801,7 +741,7 @@ function showSyncStats() {
                         
                         <strong>Status:</strong> 
                         ${stats.needs_sync 
-                            ? '<span style="color: #f39c12">⚠️ Perlu Sinkronisasi</span>' 
+                            ? '<span style="color: #f39c12">⚠️ Perlu Manual Sync</span>' 
                             : '<span style="color: #00a65a">✅ Sudah Sinkron</span>'}
                     </div>
                 `;
@@ -917,6 +857,12 @@ function showAlert(type, message) {
     `;
     
     $('.box-body').prepend(alertHtml);
+    
+    // Auto hide after 5 seconds for success/info, 8 seconds for errors
+    let hideDelay = (type === 'error') ? 8000 : 5000;
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, hideDelay);
 }
 </script>
 @endpush

@@ -125,6 +125,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maintenance Mode Driver
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine the driver used to determine and
+    | manage Laravel's "maintenance mode". Event "cache" drivers are used
+    | to store file system cache for the application. However, in some
+    | cases, you may want to use a database for this instead. Here are
+    | the database maintenance mode drivers available to your application.
+    |
+    | Supported drivers: "file", "cache"
+    |
+    */
+
+    'maintenance' => [
+        'driver' => 'file',
+        // 'store' => 'redis',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Autoloaded Service Providers
     |--------------------------------------------------------------------------
     |
@@ -237,5 +257,17 @@ return [
         'DNS2D' => Milon\Barcode\Facades\DNS2DFacade::class,
 
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Threshold Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Threshold untuk menentukan kapan produk masuk ke daftar barang habis
+    | Default: 5 (produk dengan stok <= 5 akan masuk daftar barang habis)
+    |
+    */
+
+    'stock_threshold' => env('STOCK_THRESHOLD', 5),
 
 ];

@@ -67,29 +67,31 @@
                 </div>
             </div>
 
-            <div class="box-body table-responsive">
+            <div class="box-body">
                 <form action="" method="post" class="form-produk">
                     @csrf
-                    <table class="table table-striped table-bordered">
-                        <thead>
-                            <tr>
-                                <th width="5%"><input type="checkbox" name="select_all" id="select_all"></th>
-                                <th width="5%">No</th>
-                                <th>Kode</th>
-                                <th>Nama</th>
-                                <th>Kategori</th>
-                                <th>Merk</th>
-                                @if(auth()->user()->level == 1)
-                                    <th>Harga Beli</th>
-                                    <th>Keuntungan</th>
-                                @endif
-                                <th>Harga Jual</th>
-                                <th>Diskon</th>
-                                <th>Stok</th>
-                                <th width="15%"><i class="fa fa-cog"></i></th>
-                            </tr>
-                        </thead>
-                    </table>
+                    <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="table table-striped table-bordered" style="min-width: 800px;">
+                            <thead>
+                                <tr>
+                                    <th width="5%"><input type="checkbox" name="select_all" id="select_all"></th>
+                                    <th width="5%">No</th>
+                                    <th>Kode</th>
+                                    <th>Nama</th>
+                                    <th>Kategori</th>
+                                    <th>Merk</th>
+                                    @if(auth()->user()->level == 1)
+                                        <th>Harga Beli</th>
+                                        <th>Keuntungan</th>
+                                    @endif
+                                    <th>Harga Jual</th>
+                                    <th>Diskon</th>
+                                    <th>Stok</th>
+                                    <th width="15%"><i class="fa fa-cog"></i></th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
                 </form>
             </div>
         </div>
@@ -110,28 +112,30 @@ $(function () {
     });
 
     table = $('.table').DataTable({
-        responsive: true,
+        responsive: false, // Disable responsive untuk scroll horizontal
         processing: true,
         serverSide: true,
         autoWidth: false,
+        scrollX: true, // Enable horizontal scroll
+        scrollCollapse: true,
         ajax: {
             url: '{{ route('produk.data') }}'
         },
         columns: [
-            { data: 'select_all', searchable: false, sortable: false },
-            { data: 'DT_RowIndex', searchable: false, sortable: false },
-            { data: 'kode_produk' },
-            { data: 'nama_produk' },
-            { data: 'nama_kategori' },
-            { data: 'merk' },
+            { data: 'select_all', searchable: false, sortable: false, width: '50px' },
+            { data: 'DT_RowIndex', searchable: false, sortable: false, width: '50px' },
+            { data: 'kode_produk', width: '100px' },
+            { data: 'nama_produk', width: '150px' },
+            { data: 'nama_kategori', width: '120px' },
+            { data: 'merk', width: '100px' },
             @if(auth()->user()->level == 1)
-                { data: 'harga_beli' },
-                { data: 'keuntungan' },
+                { data: 'harga_beli', width: '120px' },
+                { data: 'keuntungan', width: '120px' },
             @endif
-            { data: 'harga_jual' },
-            { data: 'diskon' },
-            { data: 'stok' },
-            { data: 'aksi', searchable: false, sortable: false }
+            { data: 'harga_jual', width: '120px' },
+            { data: 'diskon', width: '80px' },
+            { data: 'stok', width: '80px' },
+            { data: 'aksi', searchable: false, sortable: false, width: '120px' }
         ]
     });
 

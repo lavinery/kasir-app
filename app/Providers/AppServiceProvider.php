@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Produk;
 use App\Observers\ProductStockObserver;
+use App\Observers\ProdukStockObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -59,5 +60,6 @@ class AppServiceProvider extends ServiceProvider
             }
         }
         Produk::observe(ProductStockObserver::class);
+        Produk::observe(ProdukStockObserver::class);
     }
 }

@@ -56,27 +56,29 @@
                 </div>
             </div>
 
-            <div class="box-body table-responsive" style="padding-top: 0;">
+            <div class="box-body" style="padding-top: 0;">
                 <form action="" method="post" class="form-member">
                     @csrf
-                    <table class="table table-striped table-bordered" id="member-table">
-                        <thead>
-                            <tr>
-                                <th width="5%">
-                                    <input type="checkbox" name="select_all" id="select_all">
-                                </th>
-                                <th width="5%">No</th>
-                                <th width="15%">Kode Member</th>
-                                <th width="25%">Nama</th>
-                                <th width="15%">Telepon</th>
-                                <th width="20%">Alamat</th>
-                                <th width="15%"><i class="fa fa-cog"></i> Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{-- Data akan dimuat via DataTables AJAX --}}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="table table-striped table-bordered" id="member-table" style="min-width: 700px;">
+                            <thead>
+                                <tr>
+                                    <th width="5%">
+                                        <input type="checkbox" name="select_all" id="select_all">
+                                    </th>
+                                    <th width="5%">No</th>
+                                    <th width="15%">Kode Member</th>
+                                    <th width="25%">Nama</th>
+                                    <th width="15%">Telepon</th>
+                                    <th width="20%">Alamat</th>
+                                    <th width="15%"><i class="fa fa-cog"></i> Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{-- Data akan dimuat via DataTables AJAX --}}
+                            </tbody>
+                        </table>
+                    </div>
                 </form>
             </div>
         </div>
@@ -93,21 +95,23 @@
     $(function () {
         // DataTable
         table = $('#member-table').DataTable({
-            responsive: true,
+            responsive: false, // Disable responsive untuk scroll horizontal
             processing: true,
             serverSide: true,
             autoWidth: false,
+            scrollX: true, // Enable horizontal scroll
+            scrollCollapse: true,
             ajax: {
                 url: '{{ route('member.data') }}',
             },
             columns: [
-                {data: 'select_all', searchable: false, orderable: false},
-                {data: 'DT_RowIndex', searchable: false, orderable: false},
-                {data: 'kode_member'},
-                {data: 'nama'},
-                {data: 'telepon'},
-                {data: 'alamat'},
-                {data: 'aksi', searchable: false, orderable: false},
+                {data: 'select_all', searchable: false, orderable: false, width: '50px'},
+                {data: 'DT_RowIndex', searchable: false, orderable: false, width: '50px'},
+                {data: 'kode_member', width: '120px'},
+                {data: 'nama', width: '150px'},
+                {data: 'telepon', width: '120px'},
+                {data: 'alamat', width: '200px'},
+                {data: 'aksi', searchable: false, orderable: false, width: '120px'},
             ],
             language: {
                 processing: "Memuat data...",

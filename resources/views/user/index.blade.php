@@ -16,15 +16,19 @@
             <div class="box-header with-border">
                 <button onclick="addForm('{{ route('user.store') }}')" class="btn btn-success btn-xs btn-flat"><i class="fa fa-plus-circle"></i> Tambah</button>
             </div>
-            <div class="box-body table-responsive">
-                <table class="table table-stiped table-bordered">
-                    <thead>
-                        <th width="5%">No</th>
-                        <th>Nama</th>
-                        <th>Email</th>
-                        <th width="15%"><i class="fa fa-cog"></i></th>
-                    </thead>
-                </table>
+            <div class="box-body">
+                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="table table-stiped table-bordered" style="min-width: 400px;">
+                        <thead>
+                            <tr>
+                                <th width="5%">No</th>
+                                <th>Nama</th>
+                                <th>Email</th>
+                                <th width="15%"><i class="fa fa-cog"></i></th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -39,18 +43,20 @@
 
     $(function () {
         table = $('.table').DataTable({
-            responsive: true,
+            responsive: false, // Disable responsive untuk scroll horizontal
             processing: true,
             serverSide: true,
             autoWidth: false,
+            scrollX: true, // Enable horizontal scroll
+            scrollCollapse: true,
             ajax: {
                 url: '{{ route('user.data') }}',
             },
             columns: [
-                {data: 'DT_RowIndex', searchable: false, sortable: false},
-                {data: 'name'},
-                {data: 'email'},
-                {data: 'aksi', searchable: false, sortable: false},
+                {data: 'DT_RowIndex', searchable: false, sortable: false, width: '50px'},
+                {data: 'name', width: '150px'},
+                {data: 'email', width: '200px'},
+                {data: 'aksi', searchable: false, sortable: false, width: '120px'},
             ]
         });
 
