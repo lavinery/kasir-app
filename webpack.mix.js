@@ -21,3 +21,7 @@ mix.js('resources/js/app.js', 'public/js')
 if (mix.inProduction()) {
     mix.version();
 }
+mix.override((config) => {
+  if (!config.output) config.output = {};
+  config.output.hashFunction = 'xxhash64';
+});

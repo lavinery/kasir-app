@@ -140,7 +140,7 @@ class MemberController extends Controller
     {
         $request->validate([
             'id_member'   => 'required|array',
-            'id_member.*' => 'exists:members,id_member'
+            'id_member.*' => 'exists:member,id_member'
         ]);
 
         $datamember = Member::whereIn('id_member', $request->id_member)->get();

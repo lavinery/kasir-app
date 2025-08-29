@@ -9,7 +9,7 @@ use Exception;
 
 class BarangHabisService
 {
-    const THRESHOLD_STOK = 10;
+    const THRESHOLD_STOK = 5;
 
     /**
      * Sinkronisasi otomatis berdasarkan stok produk

@@ -59,9 +59,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MemberController::class, 'index'])->name('index');
             Route::get('/data', [MemberController::class, 'data'])->name('data');
             Route::post('/', [MemberController::class, 'store'])->name('store');
-            Route::get('/{member}', [MemberController::class, 'show'])->name('show');
-            Route::put('/{member}', [MemberController::class, 'update'])->name('update');
-            Route::delete('/{member}', [MemberController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}', [MemberController::class, 'show'])->name('show');
+            Route::put('/{id}', [MemberController::class, 'update'])->name('update');
+            Route::delete('/{id}', [MemberController::class, 'destroy'])->name('destroy');
 
             // Bulk actions
             Route::delete('/bulk/delete', [MemberController::class, 'bulkDestroy'])->name('bulk_destroy');
@@ -78,10 +78,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [ProdukController::class, 'index'])->name('index');
             Route::get('/data', [ProdukController::class, 'data'])->name('data');
             Route::post('/', [ProdukController::class, 'store'])->name('store');
-            Route::get('/{produk}', [ProdukController::class, 'show'])->name('show');
-            Route::get('/{produk}/edit', [ProdukController::class, 'edit'])->name('edit');
-            Route::put('/{produk}', [ProdukController::class, 'update'])->name('update');
-            Route::delete('/{produk}', [ProdukController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}', [ProdukController::class, 'show'])->name('show');
+            Route::get('/{id}/edit', [ProdukController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [ProdukController::class, 'update'])->name('update');
+            Route::delete('/{id}', [ProdukController::class, 'destroy'])->name('destroy');
 
             // Bulk actions
             Route::post('/delete-selected', [ProdukController::class, 'deleteSelected'])->name('delete_selected');
@@ -127,21 +127,26 @@ Route::middleware('auth')->group(function () {
             Route::get('/data', [PembelianController::class, 'data'])->name('data');
             Route::get('/{id}/create', [PembelianController::class, 'create'])->name('create');
             Route::post('/', [PembelianController::class, 'store'])->name('store');
-            Route::get('/{pembelian}', [PembelianController::class, 'show'])->name('show');
-            Route::put('/{pembelian}', [PembelianController::class, 'update'])->name('update');
-            Route::delete('/{pembelian}', [PembelianController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}', [PembelianController::class, 'show'])->name('show');
+            Route::put('/{id}', [PembelianController::class, 'update'])->name('update');
+            Route::delete('/{id}', [PembelianController::class, 'destroy'])->name('destroy');
         });
 
-        // PEMBELIAN DETAIL - PERBAIKAN DI SINI
+        // PEMBELIAN DETAIL - SUDAH DIPERBAIKI
         Route::prefix('pembelian_detail')->name('pembelian_detail.')->group(function () {
-            // Tambah route index yang hilang
+            // Route index (sudah ada di controller)
             Route::get('/', [PembelianDetailController::class, 'index'])->name('index');
 
+            // Route data dengan parameter id (sesuai controller)
             Route::get('/{id}/data', [PembelianDetailController::class, 'data'])->name('data');
+
+            // Route loadForm
             Route::get('/loadform/{diskon}/{total}', [PembelianDetailController::class, 'loadForm'])->name('load_form');
+
+            // CRUD operations
             Route::post('/', [PembelianDetailController::class, 'store'])->name('store');
-            Route::put('/{pembelian_detail}', [PembelianDetailController::class, 'update'])->name('update');
-            Route::delete('/{pembelian_detail}', [PembelianDetailController::class, 'destroy'])->name('destroy');
+            Route::put('/{id}', [PembelianDetailController::class, 'update'])->name('update');
+            Route::delete('/{id}', [PembelianDetailController::class, 'destroy'])->name('destroy');
         });
 
         // PENGELUARAN
@@ -171,8 +176,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/{id}/data', [PenjualanDetailController::class, 'data'])->name('data');
             Route::get('/loadform/{diskon}/{total}/{diterima}', [PenjualanDetailController::class, 'loadForm'])->name('load_form');
             Route::post('/', [PenjualanDetailController::class, 'store'])->name('store');
-            Route::put('/{transaksi}', [PenjualanDetailController::class, 'update'])->name('update');
-            Route::delete('/{transaksi}', [PenjualanDetailController::class, 'destroy'])->name('destroy');
+            Route::put('/{id}', [PenjualanDetailController::class, 'update'])->name('update');
+            Route::delete('/{id}', [PenjualanDetailController::class, 'destroy'])->name('destroy');
         });
 
         // ==================== FAVORIT PRODUK ====================
@@ -230,8 +235,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/favorites', [FavoriteProductController::class, 'index'])->name('favorites');
             Route::post('/favorites/add', [FavoriteProductController::class, 'add'])->name('favorites.add');
             Route::patch('/favorites/reorder', [FavoriteProductController::class, 'reorder'])->name('favorites.reorder');
-            Route::patch('/favorites/toggle/{favorite}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
-            Route::delete('/favorites/{favorite}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
+            Route::patch('/favorites/toggle/{id}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
+            Route::delete('/favorites/{id}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
         });
 
         // API untuk pencarian produk (admin only)
@@ -257,5 +262,127 @@ Route::middleware('auth')->group(function () {
             Route::get('/kasir', [LaporanKasirController::class, 'index'])->name('kasir.index');
             Route::post('/kasir/generate', [LaporanKasirController::class, 'generateReport'])->name('kasir.generate');
         });
+    });
+
+    // ==================== SYNC BARANG HABIS (TEMPORARY ROUTES) ====================
+
+    // Route untuk cek status barang habis
+    Route::get('/cek-barang-habis', function () {
+        $threshold = 5;
+
+        $stats = [
+            'total_barang_habis' => \App\Models\BarangHabis::count(),
+            'auto_entries' => \App\Models\BarangHabis::where('tipe', 'auto')->count(),
+            'manual_entries' => \App\Models\BarangHabis::where('tipe', 'manual')->count(),
+            'produk_stok_rendah' => \App\Models\Produk::where('stok', '<=', $threshold)->count(),
+            'perlu_ditambah' => \App\Models\Produk::where('stok', '<=', $threshold)
+                ->whereNotIn('id_produk', function ($query) {
+                    $query->select('id_produk')->from('barang_habis');
+                })->count(),
+            'perlu_dihapus' => \App\Models\BarangHabis::where('tipe', 'auto')
+                ->whereHas('produk', function ($query) use ($threshold) {
+                    $query->where('stok', '>', $threshold);
+                })->count()
+        ];
+
+        return response()->json([
+            'threshold' => $threshold,
+            'statistics' => $stats,
+            'needs_sync' => ($stats['perlu_ditambah'] + $stats['perlu_dihapus']) > 0,
+            'message' => ($stats['perlu_ditambah'] + $stats['perlu_dihapus']) > 0
+                ? 'Ada ' . ($stats['perlu_ditambah'] + $stats['perlu_dihapus']) . ' item yang perlu disinkronisasi'
+                : 'Data sudah sinkron, tidak perlu update'
+        ]);
+    });
+
+    // Route untuk sync barang habis sekali jalan
+    Route::get('/sync-barang-habis', function () {
+        $threshold = 5;
+        $added = 0;
+        $removed = 0;
+        $errors = [];
+
+        try {
+            \DB::beginTransaction();
+
+            // 1. Tambahkan produk dengan stok rendah yang belum ada di daftar
+            $produkHabis = \App\Models\Produk::where('stok', '<=', $threshold)
+                ->whereNotIn('id_produk', function ($query) {
+                    $query->select('id_produk')->from('barang_habis');
+                })->get();
+
+            foreach ($produkHabis as $produk) {
+                try {
+                    \App\Models\BarangHabis::create([
+                        'id_produk' => $produk->id_produk,
+                        'tipe' => 'auto',
+                        'keterangan' => "Sync manual via route - stok {$produk->stok} ≤ {$threshold} (" . now()->format('Y-m-d H:i:s') . ")"
+                    ]);
+                    $added++;
+                } catch (\Exception $e) {
+                    $errors[] = "Error adding {$produk->nama_produk}: " . $e->getMessage();
+                }
+            }
+
+            // 2. Hapus produk AUTO dengan stok > threshold
+            $produkAman = \App\Models\BarangHabis::where('tipe', 'auto')
+                ->whereHas('produk', function ($query) use ($threshold) {
+                    $query->where('stok', '>', $threshold);
+                })->with('produk')->get();
+
+            foreach ($produkAman as $item) {
+                try {
+                    $item->delete();
+                    $removed++;
+                } catch (\Exception $e) {
+                    $errors[] = "Error removing {$item->produk->nama_produk}: " . $e->getMessage();
+                }
+            }
+
+            \DB::commit();
+
+            // Log activity
+            \Log::info('Manual sync barang habis via route', [
+                'threshold' => $threshold,
+                'added' => $added,
+                'removed' => $removed,
+                'errors_count' => count($errors),
+                'user' => auth()->user()->name ?? 'guest',
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sinkronisasi berhasil diselesaikan!',
+                'data' => [
+                    'threshold' => $threshold,
+                    'ditambahkan' => $added,
+                    'dihapus' => $removed,
+                    'total_diproses' => $added + $removed,
+                    'errors' => $errors
+                ],
+                'summary' => "Berhasil memproses " . ($added + $removed) . " item (Tambah: {$added}, Hapus: {$removed})" .
+                    (count($errors) > 0 ? " dengan " . count($errors) . " error" : "")
+            ]);
+        } catch (\Exception $e) {
+            \DB::rollback();
+
+            \Log::error('Manual sync barang habis failed', [
+                'error' => $e->getMessage(),
+                'user' => auth()->user()->name ?? 'guest',
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Sinkronisasi gagal: ' . $e->getMessage(),
+                'data' => [
+                    'threshold' => $threshold,
+                    'ditambahkan' => 0,
+                    'dihapus' => 0,
+                    'total_diproses' => 0
+                ]
+            ], 500);
+        }
     });
 });

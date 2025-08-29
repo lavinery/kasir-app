@@ -640,7 +640,77 @@ function refreshTable() {
 }
 
 function syncAndRefresh() {
-    // Konfirmasi user
+    // Auto hide after 8 seconds for success/info, 12 seconds for errors
+    let hideDelay = (type === 'error') ? 12000 : 8000;
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, hideDelay);
+}
+
+// TAMBAHAN: Function untuk test koneksi sync
+function testSync() {
+    $.ajax({
+        url: '{{ route("barang_habis.sync_stats") }}',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                showAlert('success', '✅ Koneksi sync berfungsi normal');
+            } else {
+                showAlert('error', '❌ Koneksi sync bermasalah');
+            }
+        },
+        error: function(xhr) {
+            showAlert('error', '❌ Tidak dapat terhubung ke server sync');
+        }
+    });
+}
+
+// TAMBAHAN: Function untuk force refresh dengan loading indicator
+function forceRefreshWithSync() {
+    // Show loading overlay
+    if (!$('.loading-overlay').length) {
+        $('body').append(`
+            <div class="loading-overlay" style="
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 9999; display: flex; 
+                align-items: center; justify-content: center; color: white;
+            ">
+                <div style="text-align: center;">
+                    <i class="fa fa-spinner fa-spin" style="font-size: 3em; margin-bottom: 20px;"></i>
+                    <div style="font-size: 1.2em;">Sedang Sinkronisasi...</div>
+                    <div style="font-size: 0.9em; margin-top: 10px;">Mohon tunggu sebentar</div>
+                </div>
+            </div>
+        `);
+    }
+
+    // Run sync first, then refresh
+    $.ajax({
+        url: '{{ route("barang_habis.sync") }}',
+        type: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        data: { threshold: 5 },
+        success: function(response) {
+            if (response.success) {
+                // Refresh table
+                table.ajax.reload(function() {
+                    $('.loading-overlay').remove();
+                    updateSyncStatus('success', 'Sync + Refresh selesai');
+                    showAlert('success', 'Sinkronisasi dan refresh berhasil!');
+                });
+            } else {
+                $('.loading-overlay').remove();
+                showAlert('error', 'Sync gagal: ' + response.message);
+            }
+        },
+        error: function(xhr) {
+            $('.loading-overlay').remove();
+            showAlert('error', 'Error saat sinkronisasi');
+        }
+    });
+} Konfirmasi user
     if (!confirm('Sinkronisasi akan:\n• Menambah produk dengan stok ≤ 5 ke daftar\n• Menghapus produk auto dengan stok > 5 dari daftar\n\nLanjutkan?')) {
         return;
     }
@@ -649,33 +719,59 @@ function syncAndRefresh() {
     $('#sync-status').removeClass().addClass('label label-warning')
         .html('<i class="fa fa-spinner fa-spin"></i> Sinkronisasi...');
 
+    // Disable sync button
+    $('[onclick*="syncAndRefresh"]').prop('disabled', true);
+
     $.ajax({
         url: '{{ route("barang_habis.sync") }}',
         type: 'POST',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         },
+        data: {
+            threshold: 5 // Bisa dibuat dynamic jika perlu
+        },
         success: function(response) {
             if (response.success) {
                 // Update status badge
-                updateSyncStatus('success', `Terakhir sync: ${getCurrentTime()}`);
+                updateSyncStatus('success', `Sync berhasil: ${getCurrentTime()}`);
                 
                 // Reload table
                 table.ajax.reload();
                 
                 // Show detailed message
-                showAlert('success', response.message);
+                let message = response.message;
+                if (response.stats && response.stats.errors && response.stats.errors.length > 0) {
+                    message += '\n\nError yang terjadi:\n' + response.stats.errors.join('\n');
+                }
                 
-                // Show stats in console for debugging
+                showAlert('success', message);
+                
+                // Log stats for debugging
                 console.log('Sync Stats:', response.stats);
             } else {
                 updateSyncStatus('error', 'Sync gagal');
-                showAlert('error', response.message);
+                showAlert('error', response.message || 'Terjadi kesalahan saat sinkronisasi');
             }
         },
         error: function(xhr) {
             updateSyncStatus('error', 'Sync error');
-            showAlert('error', xhr.responseJSON?.message || 'Terjadi kesalahan saat sinkronisasi');
+            
+            let errorMessage = 'Terjadi kesalahan saat sinkronisasi';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            } else if (xhr.status === 500) {
+                errorMessage = 'Server error - periksa log aplikasi';
+            } else if (xhr.status === 422) {
+                errorMessage = 'Validasi error - periksa data input';
+            }
+            
+            showAlert('error', errorMessage);
+            console.error('Sync Error:', xhr);
+        },
+        complete: function() {
+            // Re-enable sync button
+            $('[onclick*="syncAndRefresh"]').prop('disabled', false);
         }
     });
 }
@@ -684,26 +780,46 @@ function showSyncStats() {
     $.ajax({
         url: '{{ route("barang_habis.sync_stats") }}',
         type: 'GET',
+        data: {
+            threshold: 5
+        },
         success: function(response) {
             if (response.success) {
                 let stats = response.stats;
                 let message = `
-                    <strong>Status Sinkronisasi:</strong><br>
-                    • Total Barang Habis: ${stats.total_barang_habis}<br>
-                    • Entry Auto: ${stats.auto_entries}<br>
-                    • Entry Manual: ${stats.manual_entries}<br>
-                    • Produk Stok Rendah: ${stats.produk_stok_rendah}<br>
-                    <br>
-                    <strong>Yang Perlu Disinkronisasi:</strong><br>
-                    • Perlu Ditambah: ${stats.perlu_ditambah}<br>
-                    • Perlu Dihapus: ${stats.perlu_dihapus}
+                    <div style="text-align: left;">
+                        <strong>📊 Status Sinkronisasi (Threshold: ${stats.threshold})</strong><br><br>
+                        <strong>Data Saat Ini:</strong><br>
+                        • Total Barang Habis: <strong>${stats.total_barang_habis}</strong><br>
+                        • Entry Auto: <strong>${stats.auto_entries}</strong><br>
+                        • Entry Manual: <strong>${stats.manual_entries}</strong><br>
+                        • Produk Stok Rendah: <strong>${stats.produk_stok_rendah}</strong><br><br>
+                        
+                        <strong>Yang Perlu Disinkronisasi:</strong><br>
+                        • Perlu Ditambah: <strong style="color: #d73925">${stats.perlu_ditambah}</strong><br>
+                        • Perlu Dihapus: <strong style="color: #00a65a">${stats.perlu_dihapus}</strong><br><br>
+                        
+                        <strong>Status:</strong> 
+                        ${stats.needs_sync 
+                            ? '<span style="color: #f39c12">⚠️ Perlu Sinkronisasi</span>' 
+                            : '<span style="color: #00a65a">✅ Sudah Sinkron</span>'}
+                    </div>
                 `;
                 
                 showAlert('info', message);
+                
+                // Update sync status badge
+                if (stats.needs_sync) {
+                    let totalNeedSync = stats.perlu_ditambah + stats.perlu_dihapus;
+                    updateSyncStatus('warning', `${totalNeedSync} item perlu sync`);
+                } else {
+                    updateSyncStatus('success', 'Data sudah sinkron');
+                }
             }
         },
         error: function(xhr) {
-            showAlert('error', 'Error getting sync stats');
+            showAlert('error', 'Error mendapatkan statistik sync');
+            console.error('Stats Error:', xhr);
         }
     });
 }
@@ -719,6 +835,10 @@ function updateSyncStatus(type, message) {
             break;
         case 'error':
             badgeClass = 'label-danger';
+            icon = 'fa-exclamation-triangle';
+            break;
+        case 'warning':
+            badgeClass = 'label-warning';
             icon = 'fa-exclamation-triangle';
             break;
         case 'refresh':
@@ -744,24 +864,59 @@ function getCurrentTime() {
 
 // Auto-check sync status on page load
 $(document).ready(function() {
-    // Check if sync is needed
+    // Check if sync is needed after page loads
     setTimeout(function() {
-        $.get('{{ route("barang_habis.sync_stats") }}', function(response) {
+        $.get('{{ route("barang_habis.sync_stats") }}', { threshold: 5 }, function(response) {
             if (response.success) {
                 let stats = response.stats;
                 let needsSync = stats.perlu_ditambah + stats.perlu_dihapus;
                 
                 if (needsSync > 0) {
                     updateSyncStatus('warning', `${needsSync} item perlu sync`);
-                    $('#sync-status').removeClass().addClass('label label-warning')
-                        .html(`<i class="fa fa-exclamation-triangle"></i> ${needsSync} item perlu sync`);
                 } else {
-                    updateSyncStatus('success', 'Sudah sinkron');
+                    updateSyncStatus('success', 'Data sudah sinkron');
                 }
             }
+        }).fail(function() {
+            updateSyncStatus('error', 'Error checking sync status');
         });
     }, 1000);
+
+    // Add click handlers untuk dropdown sync
+    $(document).on('click', '[onclick*="syncAndRefresh"]', function(e) {
+        e.preventDefault();
+        syncAndRefresh();
+    });
+
+    $(document).on('click', '[onclick*="showSyncStats"]', function(e) {
+        e.preventDefault();
+        showSyncStats();
+    });
+
+    $(document).on('click', '[onclick*="refreshTable"]', function(e) {
+        e.preventDefault();
+        refreshTable();
+    });
 });
+
+// Enhanced showAlert function
+function showAlert(type, message) {
+    // Remove existing alerts
+    $('.alert').remove();
+    
+    let alertClass = type === 'success' ? 'alert-success' : 
+                    type === 'info' ? 'alert-info' : 'alert-danger';
+    let alertIcon = type === 'success' ? 'fa-check-circle' : 
+                   type === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle';
+    
+    let alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible" style="margin-bottom: 15px;">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            <i class="fa ${alertIcon}"></i> ${message}
+        </div>
+    `;
+    
+    $('.box-body').prepend(alertHtml);
 }
 </script>
 @endpush

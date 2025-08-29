@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProductStockObserver
 {
-    const THRESHOLD_STOK = 10;
+    const THRESHOLD_STOK = 5;
 
     /**
      * Handle the Produk "created" event.

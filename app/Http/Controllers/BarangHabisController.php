@@ -384,34 +384,45 @@ class BarangHabisController extends Controller
     }
 
     /**
-     * Manual sync all products - triggered by refresh button
+     * FIXED: Manual sync all products - triggered by refresh button
      */
     public function syncAll(Request $request)
     {
         try {
-            $threshold = 5; // Stok threshold
+            // Ambil threshold dari request atau default 5
+            $threshold = $request->input('threshold', 5);
+
             $processed = 0;
             $added = 0;
             $removed = 0;
+            $errors = [];
 
-            // 1. Tambahkan produk dengan stok <= 5 yang belum ada di daftar
+            // Mulai database transaction
+            \DB::beginTransaction();
+
+            // 1. Tambahkan produk dengan stok <= threshold yang belum ada di daftar
             $produkHabis = Produk::where('stok', '<=', $threshold)
                 ->whereNotIn('id_produk', function ($query) {
                     $query->select('id_produk')->from('barang_habis');
                 })
+                ->with(['kategori'])
                 ->get();
 
             foreach ($produkHabis as $produk) {
-                BarangHabis::create([
-                    'id_produk' => $produk->id_produk,
-                    'tipe' => 'auto',
-                    'keterangan' => 'Sinkronisasi otomatis - stok ≤ ' . $threshold
-                ]);
-                $added++;
-                $processed++;
+                try {
+                    BarangHabis::create([
+                        'id_produk' => $produk->id_produk,
+                        'tipe' => 'auto',
+                        'keterangan' => "Sinkronisasi otomatis - stok {$produk->stok} ≤ {$threshold} (" . now()->format('Y-m-d H:i:s') . ")"
+                    ]);
+                    $added++;
+                    $processed++;
+                } catch (\Exception $e) {
+                    $errors[] = "Gagal menambah {$produk->nama_produk}: " . $e->getMessage();
+                }
             }
 
-            // 2. Hapus produk AUTO yang stoknya sudah > 5
+            // 2. Hapus produk AUTO yang stoknya sudah > threshold
             $produkAman = BarangHabis::with('produk')
                 ->where('tipe', 'auto')
                 ->whereHas('produk', function ($query) use ($threshold) {
@@ -420,30 +431,55 @@ class BarangHabisController extends Controller
                 ->get();
 
             foreach ($produkAman as $item) {
-                $item->delete();
-                $removed++;
-                $processed++;
+                try {
+                    $item->delete();
+                    $removed++;
+                    $processed++;
+                } catch (\Exception $e) {
+                    $errors[] = "Gagal menghapus {$item->produk->nama_produk}: " . $e->getMessage();
+                }
             }
 
+            // Commit transaction jika tidak ada error fatal
+            \DB::commit();
+
             // 3. Log aktivitas sync
-            \Log::info('Manual sync completed', [
+            \Log::info('Manual sync barang habis completed from web interface', [
+                'threshold' => $threshold,
                 'processed' => $processed,
                 'added' => $added,
                 'removed' => $removed,
-                'user' => auth()->user()->name ?? 'system'
+                'errors_count' => count($errors),
+                'user' => auth()->user()->name ?? 'system',
+                'timestamp' => now()
             ]);
+
+            $message = "Sinkronisasi selesai! Diproses: {$processed} item (Ditambah: {$added}, Dihapus: {$removed})";
+
+            if (count($errors) > 0) {
+                $message .= " dengan " . count($errors) . " error.";
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => "Sinkronisasi selesai! Diproses: {$processed} item (Ditambah: {$added}, Dihapus: {$removed})",
+                'message' => $message,
                 'stats' => [
+                    'threshold' => $threshold,
                     'processed' => $processed,
                     'added' => $added,
-                    'removed' => $removed
+                    'removed' => $removed,
+                    'errors' => $errors
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('Manual sync error: ' . $e->getMessage());
+            // Rollback transaction pada error
+            \DB::rollback();
+
+            \Log::error('Manual sync barang habis failed from web interface: ' . $e->getMessage(), [
+                'user' => auth()->user()->name ?? 'system',
+                'timestamp' => now(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -453,12 +489,13 @@ class BarangHabisController extends Controller
     }
 
     /**
-     * Get sync statistics
+     * FIXED: Get sync statistics
      */
-    public function getSyncStats()
+    public function getSyncStats(Request $request)
     {
         try {
-            $threshold = 5;
+            // Ambil threshold dari request atau default 5
+            $threshold = $request->input('threshold', 5);
 
             $stats = [
                 'total_barang_habis' => BarangHabis::count(),
@@ -472,17 +509,59 @@ class BarangHabisController extends Controller
                 'perlu_dihapus' => BarangHabis::where('tipe', 'auto')
                     ->whereHas('produk', function ($query) use ($threshold) {
                         $query->where('stok', '>', $threshold);
-                    })->count()
+                    })->count(),
+                'threshold' => $threshold,
+                'needs_sync' => false
             ];
+
+            // Tentukan apakah perlu sync
+            $stats['needs_sync'] = ($stats['perlu_ditambah'] + $stats['perlu_dihapus']) > 0;
 
             return response()->json([
                 'success' => true,
                 'stats' => $stats
             ]);
         } catch (\Exception $e) {
+            \Log::error('Get sync stats error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting stats: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * TAMBAHAN: Method untuk reset semua data barang habis (HANYA untuk development)
+     */
+    public function resetAll(Request $request)
+    {
+        // HANYA untuk development - jangan aktifkan di production
+        if (app()->environment('production')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reset tidak diizinkan di production'
+            ], 403);
+        }
+
+        try {
+            $count = BarangHabis::count();
+            BarangHabis::truncate();
+
+            \Log::warning('Barang Habis data reset by user', [
+                'total_deleted' => $count,
+                'user' => auth()->user()->name ?? 'system',
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil menghapus {$count} data barang habis"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error reset data: ' . $e->getMessage()
             ], 500);
         }
     }
