@@ -298,6 +298,10 @@ function editForm(url) {
 }
 
 function deleteData(url) {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     // Pastikan konfirmasi muncul dan user harus klik OK
     if (confirm('Yakin ingin menghapus produk ini?')) {
         // Tampilkan loading atau disable button jika perlu
@@ -323,6 +327,10 @@ function deleteData(url) {
 }
 
 function deleteSelected(url) {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount === 0) {

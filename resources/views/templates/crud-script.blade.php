@@ -76,6 +76,10 @@ function editForm(url) {
 
 // Function untuk hapus data dengan konfirmasi alert biasa
 function deleteData(url) {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     if (confirm('Yakin ingin menghapus {{ $itemName ?? "data" }} ini?')) {
         $.post(url, {
             '_token': $('[name=csrf-token]').attr('content'),
@@ -98,6 +102,10 @@ function deleteData(url) {
 
 // Function untuk hapus multiple data dengan konfirmasi alert biasa
 function deleteSelected(url) {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     const checkedCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]:checked').length;
     
     if (checkedCount === 0) {

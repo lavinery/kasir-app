@@ -517,6 +517,10 @@ function editItem(id, keterangan) {
 }
 
 function deleteItem(id) {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     if(confirm('Yakin ingin menghapus item ini dari daftar barang habis?')) {
         $.ajax({
             url: '{{ route("barang_habis.destroy", ":id") }}'.replace(':id', id),
@@ -538,6 +542,10 @@ function deleteItem(id) {
 }
 
 function bulkDelete() {
+    // Hentikan event propagation untuk mencegah delete otomatis
+    event.preventDefault();
+    event.stopPropagation();
+    
     if(selectedItems.length === 0) {
         showAlert('error', 'Tidak ada item yang dipilih');
         return;
@@ -634,10 +642,12 @@ function showAlert(type, message) {
     
     $('.box-body').prepend(alertHtml);
     
-    // Auto hide after 5 seconds
+    // Auto hide after 5 seconds for success/info, 8 seconds for errors
+    let hideDelay = (type === 'error') ? 8000 : 5000;
     setTimeout(function() {
         $('.alert').fadeOut();
-    }, 5000);
+    }, hideDelay);
+}
 
 function refreshTable() {
     table.ajax.reload(null, false); // false = keep current page
@@ -839,30 +849,6 @@ $(document).ready(function() {
     });
 });
 
-// Enhanced showAlert function
-function showAlert(type, message) {
-    // Remove existing alerts
-    $('.alert').remove();
-    
-    let alertClass = type === 'success' ? 'alert-success' : 
-                    type === 'info' ? 'alert-info' : 'alert-danger';
-    let alertIcon = type === 'success' ? 'fa-check-circle' : 
-                   type === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle';
-    
-    let alertHtml = `
-        <div class="alert ${alertClass} alert-dismissible" style="margin-bottom: 15px;">
-            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-            <i class="fa ${alertIcon}"></i> ${message}
-        </div>
-    `;
-    
-    $('.box-body').prepend(alertHtml);
-    
-    // Auto hide after 5 seconds for success/info, 8 seconds for errors
-    let hideDelay = (type === 'error') ? 8000 : 5000;
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, hideDelay);
-}
+
 </script>
 @endpush

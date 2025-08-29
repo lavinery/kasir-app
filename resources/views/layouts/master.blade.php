@@ -353,6 +353,9 @@
         };
 
     </script>
+    
+    {{-- TAMBAHAN: Global Delete Handler --}}
+    <script src="{{ asset('/js/delete-handler.js') }}"></script>
     @stack('scripts')
 </body>
 </html>
