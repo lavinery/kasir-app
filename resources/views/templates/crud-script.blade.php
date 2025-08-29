@@ -1,4 +1,4 @@
-{{-- Template JavaScript untuk CRUD dengan Notifikasi --}}
+{{-- Template JavaScript untuk CRUD dengan Alert Sederhana --}}
 <script>
 let table;
 
@@ -25,9 +25,9 @@ $(function () {
                     
                     // Tampilkan notifikasi sukses
                     if (response.success) {
-                        showNotification('success', response.message);
+                        showSuccessNotification(response.message);
                     } else {
-                        showNotification('error', response.message || 'Terjadi kesalahan!');
+                        showErrorNotification(response.message || 'Terjadi kesalahan!');
                     }
                 })
                 .fail((xhr) => {
@@ -64,7 +64,7 @@ function editForm(url) {
                     $(`#modal-form [name=${key}]`).val(response[key]);
                 });
             } else {
-                showNotification('error', 'Data tidak ditemukan!');
+                showErrorNotification('Data tidak ditemukan!');
                 $('#modal-form').modal('hide');
             }
         })
@@ -74,7 +74,7 @@ function editForm(url) {
         });
 }
 
-// Function untuk hapus data
+// Function untuk hapus data dengan konfirmasi alert biasa
 function deleteData(url) {
     if (confirmDelete('Yakin ingin menghapus {{ $itemName ?? "data" }} ini?')) {
         $.post(url, {
@@ -85,9 +85,9 @@ function deleteData(url) {
             table.ajax.reload();
             
             if (response.success) {
-                showNotification('success', response.message);
+                showSuccessNotification(response.message);
             } else {
-                showNotification('error', response.message || 'Terjadi kesalahan!');
+                showErrorNotification(response.message || 'Terjadi kesalahan!');
             }
         })
         .fail((xhr) => {
@@ -96,12 +96,12 @@ function deleteData(url) {
     }
 }
 
-// Function untuk hapus multiple data
+// Function untuk hapus multiple data dengan konfirmasi alert biasa
 function deleteSelected(url) {
     const checkedCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]:checked').length;
     
     if (checkedCount === 0) {
-        showNotification('warning', 'Pilih {{ $itemName ?? "data" }} yang akan dihapus!');
+        showWarningNotification('Pilih {{ $itemName ?? "data" }} yang akan dihapus!');
         return;
     }
     
@@ -109,15 +109,15 @@ function deleteSelected(url) {
         ? `Yakin ingin menghapus {{ $itemName ?? "data" }} yang dipilih?` 
         : `Yakin ingin menghapus ${checkedCount} {{ $itemName ?? "data" }} yang dipilih?`;
     
-    if (confirmDelete(message)) {
+    if (confirmDeleteMultiple(checkedCount, '{{ $itemName ?? "data" }}')) {
         $.post(url, $('.form-{{ $formClass ?? "data" }}').serialize())
             .done((response) => {
                 table.ajax.reload();
                 
                 if (response.success) {
-                    showNotification('success', response.message);
+                    showSuccessNotification(response.message);
                 } else {
-                    showNotification('error', response.message || 'Terjadi kesalahan!');
+                    showErrorNotification(response.message || 'Terjadi kesalahan!');
                 }
             })
             .fail((xhr) => {
@@ -131,11 +131,11 @@ function cetakData(url) {
     const checkedCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]:checked').length;
     
     if (checkedCount < 1) {
-        showNotification('warning', 'Pilih {{ $itemName ?? "data" }} yang akan dicetak!');
+        showWarningNotification('Pilih {{ $itemName ?? "data" }} yang akan dicetak!');
         return;
     }
     
-    showNotification('info', `Mencetak ${checkedCount} {{ $itemName ?? "data" }}...`);
+    showInfoNotification(`Mencetak ${checkedCount} {{ $itemName ?? "data" }}...`);
     
     $('.form-{{ $formClass ?? "data" }}')
         .attr('target', '_blank')
@@ -148,11 +148,11 @@ function exportData(url) {
     const checkedCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]:checked').length;
     
     if (checkedCount < 1) {
-        showNotification('warning', 'Pilih {{ $itemName ?? "data" }} yang akan di export!');
+        showWarningNotification('Pilih {{ $itemName ?? "data" }} yang akan di export!');
         return;
     }
     
-    showNotification('info', `Mengexport ${checkedCount} {{ $itemName ?? "data" }}...`);
+    showInfoNotification(`Mengexport ${checkedCount} {{ $itemName ?? "data" }}...`);
     
     $('.form-{{ $formClass ?? "data" }}')
         .attr('target', '_blank')
@@ -167,11 +167,11 @@ function exportAllData(url) {
     const totalCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]').length;
     
     if (totalCount < 1) {
-        showNotification('warning', 'Tidak ada data untuk di export!');
+        showWarningNotification('Tidak ada data untuk di export!');
         return;
     }
     
-    showNotification('info', `Mengexport semua {{ $itemName ?? "data" }} (${totalCount} data)...`);
+    showInfoNotification(`Mengexport semua {{ $itemName ?? "data" }} (${totalCount} data)...`);
     
     $('.form-{{ $formClass ?? "data" }}')
         .attr('target', '_blank')
@@ -185,7 +185,7 @@ $('[name=select_all]').on('click', function () {
     
     const checkedCount = $('input[name="{{ $checkboxName ?? "id[]" }}"]:checked').length;
     if (checkedCount > 0) {
-        showNotification('info', `${checkedCount} {{ $itemName ?? "data" }} dipilih`);
+        showInfoNotification(`${checkedCount} {{ $itemName ?? "data" }} dipilih`);
     }
 });
 
@@ -205,7 +205,7 @@ $(document).on('change', 'input[name="{{ $checkboxName ?? "id[]" }}"]', function
     
     // Tampilkan notifikasi jika ada yang dipilih
     if (checkedCount > 0) {
-        showNotification('info', `${checkedCount} {{ $itemName ?? "data" }} dipilih`);
+        showInfoNotification(`${checkedCount} {{ $itemName ?? "data" }} dipilih`);
     }
 });
 </script>
