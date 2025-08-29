@@ -50,13 +50,13 @@ class ProdukController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_produk' => 'required',
-            'id_kategori' => 'required',
-            'harga_beli' => 'required|numeric',
-            'keuntungan' => 'required|numeric',
-            'harga_jual' => 'required|numeric',
-            'stok'       => 'required|numeric',
-            'kode_produk' => 'nullable|string|unique:produk,kode_produk',
+            'nama_produk' => 'required|string|max:255',
+            'id_kategori' => 'required|integer|exists:kategori,id_kategori',
+            'harga_beli' => 'required|numeric|min:0|max:999999999',
+            'harga_jual' => 'required|numeric|min:0|max:999999999',
+            'stok'       => 'required|integer|min:0|max:999999',
+            'diskon'     => 'nullable|integer|min:0|max:100',
+            'kode_produk' => 'nullable|string|max:50|unique:produk,kode_produk',
         ]);
 
         $produkTerakhir = Produk::latest()->first() ?? new Produk();
@@ -69,7 +69,10 @@ class ProdukController extends Controller
         $data['keuntungan'] = $data['harga_jual'] - $data['harga_beli'];
 
         Produk::create($data);
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk berhasil ditambahkan!'
+        ], 200);
     }
 
     public function show($id)
@@ -77,27 +80,88 @@ class ProdukController extends Controller
         return response()->json(Produk::find($id));
     }
 
+    public function edit($id)
+    {
+        return response()->json(Produk::find($id));
+    }
+
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'nama_produk' => 'required|string|max:255',
+            'id_kategori' => 'required|integer|exists:kategori,id_kategori',
+            'harga_beli' => 'required|numeric|min:0|max:999999999',
+            'harga_jual' => 'required|numeric|min:0|max:999999999',
+            'stok'       => 'required|integer|min:0|max:999999',
+            'diskon'     => 'nullable|integer|min:0|max:100',
+            'kode_produk' => 'nullable|string|max:50|unique:produk,kode_produk,' . $id . ',id_produk',
+        ]);
+
         $produk = Produk::find($id);
         $data = $request->all();
         $data['keuntungan'] = $data['harga_jual'] - $data['harga_beli'];
         $produk->update($data);
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk berhasil diperbarui!'
+        ], 200);
     }
 
     public function destroy($id)
     {
-        Produk::find($id)->delete();
-        return response(null, 204);
+        $produk = Produk::find($id);
+        if (!$produk) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk tidak ditemukan!'
+            ], 404);
+        }
+        
+        $namaProduk = $produk->nama_produk;
+        $produk->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Produk '{$namaProduk}' berhasil dihapus!"
+        ], 200);
     }
 
     public function deleteSelected(Request $request)
     {
-        foreach ($request->id_produk as $id) {
-            Produk::find($id)->delete();
+        if (!$request->id_produk || count($request->id_produk) == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pilih produk yang akan dihapus!'
+            ], 400);
         }
-        return response(null, 204);
+
+        $deletedCount = 0;
+        $deletedNames = [];
+        
+        foreach ($request->id_produk as $id) {
+            $produk = Produk::find($id);
+            if ($produk) {
+                $deletedNames[] = $produk->nama_produk;
+                $produk->delete();
+                $deletedCount++;
+            }
+        }
+        
+        if ($deletedCount == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada produk yang berhasil dihapus!'
+            ], 400);
+        }
+        
+        $message = $deletedCount == 1 
+            ? "Produk '{$deletedNames[0]}' berhasil dihapus!"
+            : "{$deletedCount} produk berhasil dihapus!";
+            
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ], 200);
     }
 
 
@@ -391,4 +455,75 @@ class ProdukController extends Controller
 
     //     return response()->download($zipFile)->deleteFileAfterSend(true);
     // }
+
+    public function barcodePDF()
+    {
+        $produk = Produk::all();
+        $pdf = PDF::loadView('produk.barcode', compact('produk'));
+        $pdf->setPaper('a4', 'portrait');
+        return $pdf->stream('barcode-produk.pdf');
+    }
+
+    public function barcodePNG(Request $request)
+    {
+        $produkList = Produk::whereIn('id_produk', $request->id_produk)->get();
+
+        $zipFile = storage_path('app/barcode-images.zip');
+        if (file_exists($zipFile)) {
+            unlink($zipFile);
+        }
+
+        $zip = new \ZipArchive;
+        if ($zip->open($zipFile, \ZipArchive::CREATE) === TRUE) {
+            foreach ($produkList as $produk) {
+                // Generate barcode
+                $d = new \Milon\Barcode\DNS1D();
+                $barcodeBase64 = $d->getBarcodePNG($produk->kode_produk, 'C39', 2, 60);
+                $barcodeImage = imagecreatefromstring(base64_decode($barcodeBase64));
+
+                // Ukuran final gambar
+                $width = 500;
+                $height = 220;
+                $img = imagecreatetruecolor($width, $height);
+
+                // Warna
+                $white = imagecolorallocate($img, 255, 255, 255);
+                $black = imagecolorallocate($img, 0, 0, 0);
+                imagefill($img, 0, 0, $white);
+
+                // Border tebal
+                $borderColor = imagecolorallocate($img, 0, 0, 0);
+                imagerectangle($img, 0, 0, $width - 1, $height - 1, $borderColor);
+
+                // Tulis nama produk dan harga
+                $fontPath = public_path('fonts/arial.ttf');
+                $text = $produk->nama_produk . ' - Rp ' . format_uang($produk->harga_jual);
+                imagettftext($img, 12, 0, 20, 30, $black, $fontPath, $text);
+
+                // Tempel barcode
+                $barcodeX = ($width - imagesx($barcodeImage)) / 2;
+                imagecopy($img, $barcodeImage, $barcodeX, 50, 0, 0, imagesx($barcodeImage), imagesy($barcodeImage));
+
+                // Tulis kode barcode di bawahnya
+                $kodeX = ($width - (strlen($produk->kode_produk) * 12)) / 2;
+                imagettftext($img, 14, 0, $kodeX, 160, $black, $fontPath, $produk->kode_produk);
+
+                // Simpan image ke buffer
+                ob_start();
+                imagepng($img);
+                $imageData = ob_get_clean();
+
+                // Tambah ke ZIP
+                $zip->addFromString('barcode-' . $produk->kode_produk . '.png', $imageData);
+
+                // Bersihkan memori
+                imagedestroy($img);
+                imagedestroy($barcodeImage);
+            }
+
+            $zip->close();
+        }
+
+        return response()->download($zipFile)->deleteFileAfterSend(true);
+    }
 }
