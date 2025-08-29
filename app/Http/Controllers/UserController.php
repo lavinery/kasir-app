@@ -58,7 +58,10 @@ class UserController extends Controller
         $user->foto = '/img/user.jpg';
         $user->save();
 
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'User berhasil ditambahkan!'
+        ], 200);
     }
 
     /**
@@ -101,7 +104,10 @@ class UserController extends Controller
             $user->password = bcrypt($request->password);
         $user->update();
 
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'User berhasil diperbarui!'
+        ], 200);
     }
 
     /**
@@ -112,9 +118,21 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        $user = User::find($id)->delete();
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan!'
+            ], 404);
+        }
 
-        return response(null, 204);
+        $namaUser = $user->name;
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "User '{$namaUser}' berhasil dihapus!"
+        ], 200);
     }
 
     public function profil()

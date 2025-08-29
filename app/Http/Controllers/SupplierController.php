@@ -49,8 +49,10 @@ class SupplierController extends Controller
 
         Supplier::create($validated);
 
-        // Kembalikan 204 No Content agar cocok dengan AJAX .done() tanpa JSON
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Supplier berhasil ditambahkan!'
+        ], 200);
     }
 
     public function show($id)
@@ -82,20 +84,28 @@ class SupplierController extends Controller
 
         $supplier->update($validated);
 
-        // 204 No Content
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Supplier berhasil diperbarui!'
+        ], 200);
     }
 
     public function destroy($id)
     {
         $supplier = Supplier::find($id);
         if (!$supplier) {
-            return response()->json(['error' => 'Supplier tidak ditemukan'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Supplier tidak ditemukan!'
+            ], 404);
         }
 
+        $namaSupplier = $supplier->nama;
         $supplier->delete();
 
-        // 204 No Content
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => "Supplier '{$namaSupplier}' berhasil dihapus!"
+        ], 200);
     }
 }

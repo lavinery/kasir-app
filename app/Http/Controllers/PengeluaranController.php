@@ -57,7 +57,10 @@ class PengeluaranController extends Controller
     {
         $pengeluaran = Pengeluaran::create($request->all());
 
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengeluaran berhasil ditambahkan!'
+        ], 200);
     }
 
     /**
@@ -93,9 +96,20 @@ class PengeluaranController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $pengeluaran = Pengeluaran::find($id)->update($request->all());
+        $pengeluaran = Pengeluaran::find($id);
+        if (!$pengeluaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengeluaran tidak ditemukan!'
+            ], 404);
+        }
+        
+        $pengeluaran->update($request->all());
 
-        return response()->json('Data berhasil disimpan', 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengeluaran berhasil diperbarui!'
+        ], 200);
     }
 
     /**
@@ -106,8 +120,20 @@ class PengeluaranController extends Controller
      */
     public function destroy($id)
     {
-        $pengeluaran = Pengeluaran::find($id)->delete();
+        $pengeluaran = Pengeluaran::find($id);
+        if (!$pengeluaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengeluaran tidak ditemukan!'
+            ], 404);
+        }
 
-        return response(null, 204);
+        $deskripsi = $pengeluaran->deskripsi;
+        $pengeluaran->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Pengeluaran '{$deskripsi}' berhasil dihapus!"
+        ], 200);
     }
 }

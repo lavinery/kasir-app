@@ -98,6 +98,8 @@
     <script src="{{ asset('AdminLTE-2/dist/js/adminlte.min.js') }}"></script>
     <!-- Validator -->
     <script src="{{ asset('js/validator.min.js') }}"></script>
+    <!-- Global Notifications -->
+    <script src="{{ asset('js/notifications.js') }}"></script>
 
     <script>
       $.extend(true, $.fn.dataTable.defaults, {

@@ -69,8 +69,10 @@ class MemberController extends Controller
             'alamat'      => $request->alamat,
         ]);
 
-        // tanpa JSON, cukup 204 untuk AJAX
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Member berhasil ditambahkan!'
+        ], 200);
     }
 
     public function show($id)
@@ -104,36 +106,67 @@ class MemberController extends Controller
 
         $member->update($request->only(['nama', 'telepon', 'alamat']));
 
-        // tanpa JSON
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Member berhasil diperbarui!'
+        ], 200);
     }
 
     public function destroy($id)
     {
         $member = Member::find($id);
         if (!$member) {
-            return response()->json(['error' => 'Member tidak ditemukan'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Member tidak ditemukan!'
+            ], 404);
         }
 
+        $namaMember = $member->nama;
         $member->delete();
 
-        // tanpa JSON
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => "Member '{$namaMember}' berhasil dihapus!"
+        ], 200);
     }
 
     public function bulkDestroy(Request $request)
     {
-        $request->validate([
-            'id_member'   => 'required|array',
-            'id_member.*' => 'exists:members,id_member'
-        ], [
-            'id_member.required' => 'Pilih minimal satu member.'
-        ]);
+        if (!$request->id_member || count($request->id_member) == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pilih member yang akan dihapus!'
+            ], 400);
+        }
 
-        Member::whereIn('id_member', $request->id_member)->delete();
-
-        // tanpa JSON
-        return response()->noContent();
+        $deletedCount = 0;
+        $deletedNames = [];
+        
+        foreach ($request->id_member as $id) {
+            $member = Member::find($id);
+            if ($member) {
+                $deletedNames[] = $member->nama;
+                $member->delete();
+                $deletedCount++;
+            }
+        }
+        
+        if ($deletedCount == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada member yang berhasil dihapus!'
+            ], 400);
+        }
+        
+        $message = $deletedCount == 1 
+            ? "Member '{$deletedNames[0]}' berhasil dihapus!"
+            : "{$deletedCount} member berhasil dihapus!";
+            
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ], 200);
     }
 
     public function cetakMember(Request $request)

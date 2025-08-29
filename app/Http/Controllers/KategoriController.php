@@ -45,8 +45,10 @@ class KategoriController extends Controller
 
         Kategori::create($validated);
 
-        // 204 No Content → cocok untuk AJAX .done() tanpa JSON
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil ditambahkan!'
+        ], 200);
     }
 
     public function show($id)
@@ -74,20 +76,28 @@ class KategoriController extends Controller
 
         $kategori->update($validated);
 
-        // 204 No Content
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil diperbarui!'
+        ], 200);
     }
 
     public function destroy($id)
     {
         $kategori = Kategori::find($id);
         if (!$kategori) {
-            return response()->json(['error' => 'Kategori tidak ditemukan'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Kategori tidak ditemukan!'
+            ], 404);
         }
 
+        $namaKategori = $kategori->nama_kategori;
         $kategori->delete();
 
-        // 204 No Content
-        return response()->noContent();
+        return response()->json([
+            'success' => true,
+            'message' => "Kategori '{$namaKategori}' berhasil dihapus!"
+        ], 200);
     }
 }
