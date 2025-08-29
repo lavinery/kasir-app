@@ -76,7 +76,7 @@ function editForm(url) {
 
 // Function untuk hapus data dengan konfirmasi alert biasa
 function deleteData(url) {
-    if (confirmDelete('Yakin ingin menghapus {{ $itemName ?? "data" }} ini?')) {
+    if (confirm('Yakin ingin menghapus {{ $itemName ?? "data" }} ini?')) {
         $.post(url, {
             '_token': $('[name=csrf-token]').attr('content'),
             '_method': 'delete'
@@ -109,7 +109,7 @@ function deleteSelected(url) {
         ? `Yakin ingin menghapus {{ $itemName ?? "data" }} yang dipilih?` 
         : `Yakin ingin menghapus ${checkedCount} {{ $itemName ?? "data" }} yang dipilih?`;
     
-    if (confirmDeleteMultiple(checkedCount, '{{ $itemName ?? "data" }}')) {
+    if (confirm(message)) {
         $.post(url, $('.form-{{ $formClass ?? "data" }}').serialize())
             .done((response) => {
                 table.ajax.reload();

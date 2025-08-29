@@ -21,20 +21,6 @@ function showInfoNotification(message = 'Informasi') {
     alert('Info: ' + message);
 }
 
-// Function untuk konfirmasi delete yang lebih baik
-function confirmDelete(message = 'Yakin ingin menghapus data ini?') {
-    return confirm(message);
-}
-
-// Function untuk konfirmasi delete multiple
-function confirmDeleteMultiple(count, itemName = 'item') {
-    const message = count === 1 
-        ? `Yakin ingin menghapus ${itemName} yang dipilih?` 
-        : `Yakin ingin menghapus ${count} ${itemName} yang dipilih?`;
-    
-    return confirm(message);
-}
-
 // Function untuk handle AJAX response
 function handleAjaxResponse(response, successMessage = null) {
     if (response.success) {
@@ -93,7 +79,7 @@ $(document).ready(function() {
         const url = $(this).data('delete-url');
         const message = $(this).data('delete-message') || 'Yakin ingin menghapus data ini?';
         
-        if (confirmDelete(message)) {
+        if (confirm(message)) {
             $.ajax({
                 url: url,
                 method: 'DELETE',

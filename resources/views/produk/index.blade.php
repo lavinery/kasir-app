@@ -104,6 +104,11 @@
 let table;
 
 $(function () {
+    // CSRF untuk semua AJAX
+    $.ajaxSetup({
+        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+    });
+
     table = $('.table').DataTable({
         responsive: true,
         processing: true,
@@ -130,36 +135,43 @@ $(function () {
         ]
     });
 
-    $('#modal-form').validator().on('submit', function (e) {
-        if (!e.preventDefault()) {
-            $.post($('#modal-form form').attr('action'), $('#modal-form form').serialize())
-                .done((response) => {
-                    $('#modal-form').modal('hide');
-                    table.ajax.reload();
-                    
-                    // Tampilkan notifikasi sukses
-                    if (response.success) {
-                        showSuccessNotification(response.message);
-                    } else {
-                        showErrorNotification(response.message || 'Terjadi kesalahan!');
-                    }
-                })
-                .fail((xhr) => {
-                    let message = 'Tidak dapat menyimpan data';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        message = xhr.responseJSON.message;
-                    }
-                    showErrorNotification(message);
-                });
-        }
+    // Submit form modal via AJAX (create & update) - SAMA SEPERTI KATEGORI
+    const $form = $('#modal-form form');
+    $form.on('submit', function (e) {
+        e.preventDefault();
+
+        $.post($form.attr('action'), $form.serialize())
+            .done(function (response) {
+                $('#modal-form').modal('hide');
+                table.ajax.reload(null, false);
+                
+                // Tampilkan notifikasi sukses
+                if (response.success) {
+                    alert(response.message);
+                } else {
+                    alert('Data berhasil disimpan!');
+                }
+            })
+            .fail(function (xhr) {
+                let msg = 'Tidak dapat menyimpan data';
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    const firstErr = Object.values(xhr.responseJSON.errors)[0][0];
+                    msg = firstErr || msg;
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                alert(msg);
+            });
+
+        return false;
     });
 
     $('[name=select_all]').on('click', function () {
         $('input[name="id_produk[]"]').prop('checked', this.checked);
         
         const checkedCount = $('input[name="id_produk[]"]:checked').length;
-        if (checkedCount > 0) {
-            showInfoNotification(`${checkedCount} produk dipilih`);
+        if (checkedCount > 1) {
+            alert(`${checkedCount} produk dipilih`);
         }
     });
 
@@ -174,10 +186,10 @@ $(function () {
         let value = parseInt($(this).val()) || 0;
         if (value < 0) {
             $(this).val(0);
-            showWarningNotification('Stok tidak boleh negatif!');
+            alert('Stok tidak boleh negatif!');
         } else if (value > 999999) {
             $(this).val(999999);
-            showWarningNotification('Stok maksimal adalah 999,999!');
+            alert('Stok maksimal adalah 999,999!');
         }
     });
 
@@ -186,10 +198,10 @@ $(function () {
         let value = parseInt($(this).val()) || 0;
         if (value < 0) {
             $(this).val(0);
-            showWarningNotification('Harga tidak boleh negatif!');
+            alert('Harga tidak boleh negatif!');
         } else if (value > 999999999) {
             $(this).val(999999999);
-            showWarningNotification('Harga maksimal adalah 999,999,999!');
+            alert('Harga maksimal adalah 999,999,999!');
         }
     });
 
@@ -198,10 +210,10 @@ $(function () {
         let value = parseInt($(this).val()) || 0;
         if (value < 0) {
             $(this).val(0);
-            showWarningNotification('Diskon tidak boleh negatif!');
+            alert('Diskon tidak boleh negatif!');
         } else if (value > 100) {
             $(this).val(100);
-            showWarningNotification('Diskon maksimal adalah 100%!');
+            alert('Diskon maksimal adalah 100%!');
         }
     });
 
@@ -212,7 +224,7 @@ $(function () {
         
         if (originalValue !== numericValue) {
             $(this).val(numericValue);
-            showInfoNotification('Kode produk hanya boleh berisi angka!');
+            alert('Kode produk hanya boleh berisi angka!');
         }
     });
     
@@ -230,14 +242,12 @@ $(function () {
             $('[name=select_all]').prop('checked', false).prop('indeterminate', true);
         }
         
-        // Tampilkan notifikasi jika ada yang dipilih
-        if (checkedCount > 0) {
-            showInfoNotification(`${checkedCount} produk dipilih`);
+        // Tampilkan notifikasi jika ada yang dipilih (hanya jika lebih dari 1)
+        if (checkedCount > 1) {
+            alert(`${checkedCount} produk dipilih`);
         }
     });
 });
-
-
 
 function addForm(url) {
     $('#modal-form').modal('show');
@@ -269,7 +279,7 @@ function editForm(url) {
                 $('#modal-form [name=diskon]').val(response.diskon);
                 $('#modal-form [name=stok]').val(response.stok);
             } else {
-                showErrorNotification('Data produk tidak ditemukan!');
+                alert('Data produk tidak ditemukan!');
                 $('#modal-form').modal('hide');
             }
         })
@@ -278,59 +288,24 @@ function editForm(url) {
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 message = xhr.responseJSON.message;
             }
-            showErrorNotification(message);
+            alert(message);
             $('#modal-form').modal('hide');
         });
 }
 
 function deleteData(url) {
+    // Pastikan konfirmasi muncul dan user harus klik OK
     if (confirm('Yakin ingin menghapus produk ini?')) {
-        $.post(url, {
-            '_token': $('[name=csrf-token]').attr('content'),
-            '_method': 'delete'
-        })
-        .done((response) => {
-            table.ajax.reload();
-            
-            // Tampilkan notifikasi sukses
-            if (response.success) {
-                showSuccessNotification(response.message);
-            } else {
-                showErrorNotification(response.message || 'Terjadi kesalahan!');
-            }
-        })
-        .fail((xhr) => {
-            let message = 'Tidak dapat menghapus data';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            }
-            showErrorNotification(message);
-        });
-    }
-}
-
-function deleteSelected(url) {
-    const checkedCount = $('input[name="id_produk[]"]:checked').length;
-    
-    if (checkedCount === 0) {
-        showWarningNotification('Pilih produk yang akan dihapus!');
-        return;
-    }
-    
-    const message = checkedCount === 1 
-        ? 'Yakin ingin menghapus produk yang dipilih?' 
-        : `Yakin ingin menghapus ${checkedCount} produk yang dipilih?`;
-    
-    if (confirm(message)) {
-        $.post(url, $('.form-produk').serialize())
+        // Tampilkan loading atau disable button jika perlu
+        $.post(url, { _method: 'delete' })
             .done((response) => {
-                table.ajax.reload();
+                table.ajax.reload(null, false);
                 
                 // Tampilkan notifikasi sukses
                 if (response.success) {
-                    showSuccessNotification(response.message);
+                    alert(response.message);
                 } else {
-                    showErrorNotification(response.message || 'Terjadi kesalahan!');
+                    alert('Data berhasil dihapus!');
                 }
             })
             .fail((xhr) => {
@@ -338,7 +313,43 @@ function deleteSelected(url) {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     message = xhr.responseJSON.message;
                 }
-                showErrorNotification(message);
+                alert(message);
+            });
+    }
+}
+
+function deleteSelected(url) {
+    const checkedCount = $('input[name="id_produk[]"]:checked').length;
+    
+    if (checkedCount === 0) {
+        alert('Pilih produk yang akan dihapus!');
+        return;
+    }
+    
+    const message = checkedCount === 1 
+        ? 'Yakin ingin menghapus produk yang dipilih?' 
+        : `Yakin ingin menghapus ${checkedCount} produk yang dipilih?`;
+    
+    // Pastikan konfirmasi muncul dan user harus klik OK
+    if (confirm(message)) {
+        // Tampilkan loading atau disable button jika perlu
+        $.post(url, $('.form-produk').serialize())
+            .done((response) => {
+                table.ajax.reload(null, false);
+                
+                // Tampilkan notifikasi sukses
+                if (response.success) {
+                    alert(response.message);
+                } else {
+                    alert('Data berhasil dihapus!');
+                }
+            })
+            .fail((xhr) => {
+                let message = 'Tidak dapat menghapus data';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                alert(message);
             });
     }
 }
@@ -347,11 +358,11 @@ function cetakDaftar(url) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan dicetak!');
+        alert('Pilih produk yang akan dicetak!');
         return;
     }
     
-    showInfoNotification(`Mencetak ${checkedCount} produk...`);
+    alert(`Mencetak ${checkedCount} produk...`);
     
     // Submit form tanpa target _blank agar tidak buka halaman baru
     $('.form-produk')
@@ -364,14 +375,14 @@ function cetakBarcode(url) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan dicetak!');
+        alert('Pilih produk yang akan dicetak!');
         return;
     }
     
     // Ambil nilai jumlah copy
     let jumlahCopy = $('#jumlah_copy_global').val() || 1;
     
-    showInfoNotification(`Mencetak barcode ${checkedCount} produk (${jumlahCopy} copy)...`);
+    alert(`Mencetak barcode ${checkedCount} produk (${jumlahCopy} copy)...`);
     
     // Tambahkan field jumlah_copy_global ke form
     $('<input>').attr({
@@ -391,11 +402,11 @@ function barcodePNG(url) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan dicetak!');
+        alert('Pilih produk yang akan dicetak!');
         return;
     }
     
-    showInfoNotification(`Mengunduh barcode PNG ${checkedCount} produk...`);
+    alert(`Mengunduh barcode PNG ${checkedCount} produk...`);
     
     // Submit form tanpa target _blank agar tidak buka halaman baru
     $('.form-produk')
@@ -408,13 +419,13 @@ function cetakBarcodeLabel(url, ukuran) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan dicetak!');
+        alert('Pilih produk yang akan dicetak!');
         return;
     }
     
     let jumlahCopy = $('#jumlah_copy_global').val() || 1;
     
-    showInfoNotification(`Mencetak label barcode ${checkedCount} produk (${jumlahCopy} copy, ${ukuran}mm)...`);
+    alert(`Mencetak label barcode ${checkedCount} produk (${jumlahCopy} copy, ${ukuran}mm)...`);
     
     $('<input>').attr({
         type: 'hidden',
@@ -428,17 +439,18 @@ function cetakBarcodeLabel(url, ukuran) {
         .attr('action', url)
         .submit();
 }
+
 function cetakBarcodeLabel33x15(url) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan dicetak!');
+        alert('Pilih produk yang akan dicetak!');
         return;
     }
     
     let jumlahCopy = $('#jumlah_copy_global').val() || 1;
     
-    showInfoNotification(`Mencetak label barcode ${checkedCount} produk (${jumlahCopy} copy, 33x15mm)...`);
+    alert(`Mencetak label barcode ${checkedCount} produk (${jumlahCopy} copy, 33x15mm)...`);
     
     // Hapus input hidden yang mungkin sudah ada sebelumnya
     $('input[name="jumlah_copy_global"]').remove();
@@ -456,15 +468,16 @@ function cetakBarcodeLabel33x15(url) {
         .attr('action', url)
         .submit();
 }
+
 function exportExcel(url) {
     const checkedCount = $('input[name="id_produk[]"]:checked').length;
     
     if (checkedCount < 1) {
-        showWarningNotification('Pilih produk yang akan di export!');
+        alert('Pilih produk yang akan di export!');
         return;
     }
     
-    showInfoNotification(`Mengexport ${checkedCount} produk ke Excel...`);
+    alert(`Mengexport ${checkedCount} produk ke Excel...`);
     
     // Submit form untuk export tanpa target _blank
     $('.form-produk')
@@ -481,11 +494,11 @@ function exportAllExcel(url) {
     const totalCount = $('input[name="id_produk[]"]').length;
     
     if (totalCount < 1) {
-        showWarningNotification('Tidak ada data untuk di export!');
+        alert('Tidak ada data untuk di export!');
         return;
     }
     
-    showInfoNotification(`Mengexport semua produk (${totalCount} data) ke Excel...`);
+    alert(`Mengexport semua produk (${totalCount} data) ke Excel...`);
     
     // Submit form tanpa target _blank agar tidak buka halaman baru
     $('.form-produk')
@@ -493,7 +506,6 @@ function exportAllExcel(url) {
         .attr('action', url)
         .submit();
 }
-
 
 </script>
 @endpush
