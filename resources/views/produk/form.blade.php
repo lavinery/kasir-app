@@ -78,7 +78,7 @@
                         <label for="kode_produk" class="col-lg-2 col-lg-offset-1 control-label">Kode Produk (Barcode)</label>
                         <div class="col-lg-6">
                             <input type="text" name="kode_produk" id="kode_produk" class="form-control"
-                                placeholder="Masukkan Barcode (Opsional)" maxlength="50" pattern="[0-9]*">
+                                placeholder="Masukkan Barcode (Opsional)" maxlength="50">
                             <span class="help-block with-errors"></span>
                         </div>
                     </div>

@@ -221,16 +221,7 @@ $(function () {
         }
     });
 
-    // Validasi kode produk hanya angka
-    $('#kode_produk').on('input', function () {
-        const originalValue = $(this).val();
-        const numericValue = originalValue.replace(/[^0-9]/g, '');
-        
-        if (originalValue !== numericValue) {
-            $(this).val(numericValue);
-            alert('Kode produk hanya boleh berisi angka!');
-        }
-    });
+
     
     // Event listener untuk checkbox individual
     $(document).on('change', 'input[name="id_produk[]"]', function() {
