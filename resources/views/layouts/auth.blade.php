@@ -39,8 +39,9 @@
     <script src="{{ asset('AdminLTE-2/bower_components/bootstrap/dist/js/bootstrap.min.js') }}"></script>
     <!-- iCheck -->
     <script src="{{ asset('AdminLTE-2/plugins/iCheck/icheck.min.js') }}"></script>
-    <!-- Validator -->
-    <script src="{{ asset('js/validator.min.js') }}"></script>
+    <!-- jQuery Validation Plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/additional-methods.min.js"></script>
     <script>
         $(function () {
             $('input').iCheck({
@@ -49,7 +50,7 @@
                 increaseArea: '20%' /* optional */
             });
         });
-        $('.form-login').validator();
+        $('.form-login').validate();
     </script>
 </body>
 </html>

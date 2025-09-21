@@ -125,6 +125,8 @@ Route::middleware('auth')->group(function () {
         Route::prefix('pembelian')->name('pembelian.')->group(function () {
             Route::get('/', [PembelianController::class, 'index'])->name('index');
             Route::get('/data', [PembelianController::class, 'data'])->name('data');
+            Route::get('/daily-summary', [PembelianController::class, 'dailySummary'])->name('daily_summary');
+            Route::get('/daily-details/{date}', [PembelianController::class, 'dailyDetails'])->name('daily_details');
             Route::get('/{id}/create', [PembelianController::class, 'create'])->name('create');
             Route::post('/', [PembelianController::class, 'store'])->name('store');
             Route::get('/{id}', [PembelianController::class, 'show'])->name('show');
@@ -150,13 +152,23 @@ Route::middleware('auth')->group(function () {
         });
 
         // PENGELUARAN
-        Route::get('/pengeluaran/data', [PengeluaranController::class, 'data'])->name('pengeluaran.data');
-        Route::resource('/pengeluaran', PengeluaranController::class);
+        Route::prefix('pengeluaran')->name('pengeluaran.')->group(function () {
+            Route::get('/', [PengeluaranController::class, 'index'])->name('index');
+            Route::get('/data', [PengeluaranController::class, 'data'])->name('data');
+            Route::get('/daily-summary', [PengeluaranController::class, 'dailySummary'])->name('daily_summary');
+            Route::get('/daily-details/{date}', [PengeluaranController::class, 'dailyDetails'])->name('daily_details');
+            Route::post('/', [PengeluaranController::class, 'store'])->name('store');
+            Route::get('/{id}', [PengeluaranController::class, 'show'])->name('show');
+            Route::put('/{id}', [PengeluaranController::class, 'update'])->name('update');
+            Route::delete('/{id}', [PengeluaranController::class, 'destroy'])->name('destroy');
+        });
 
         // PENJUALAN
         Route::prefix('penjualan')->name('penjualan.')->group(function () {
             Route::get('/', [PenjualanController::class, 'index'])->name('index');
             Route::get('/data', [PenjualanController::class, 'data'])->name('data');
+            Route::get('/daily-summary', [PenjualanController::class, 'dailySummary'])->name('daily_summary');
+            Route::get('/daily-details/{date}', [PenjualanController::class, 'dailyDetails'])->name('daily_details');
             Route::get('/{id}', [PenjualanController::class, 'show'])->name('show');
             Route::delete('/{id}', [PenjualanController::class, 'destroy'])->name('destroy');
             Route::get('/{id}/nota-kecil', [PenjualanController::class, 'cetakNotaKecil'])->name('notaKecil');

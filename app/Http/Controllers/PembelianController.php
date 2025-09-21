@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Pembelian;
 use App\Models\PembelianDetail;
+use App\Models\PembelianDailySummary;
 use App\Models\Produk;
 use App\Models\Supplier;
 
@@ -15,6 +16,84 @@ class PembelianController extends Controller
         $supplier = Supplier::orderBy('nama')->get();
 
         return view('pembelian.index', compact('supplier'));
+    }
+
+    public function dailySummary()
+    {
+        try {
+            $summaries = PembelianDailySummary::orderBy('tanggal', 'desc')->get();
+
+            return datatables()
+                ->of($summaries)
+                ->addIndexColumn()
+                ->addColumn('tanggal', function ($summary) {
+                    return tanggal_indonesia($summary->tanggal, false);
+                })
+                ->addColumn('total_pembelian', function ($summary) {
+                    return 'Rp. ' . format_uang($summary->total_pembelian ?? 0);
+                })
+                ->addColumn('total_transaksi', function ($summary) {
+                    return format_uang($summary->total_transaksi ?? 0);
+                })
+                ->addColumn('total_item', function ($summary) {
+                    return format_uang($summary->total_item ?? 0);
+                })
+                ->addColumn('aksi', function ($summary) {
+                    return '
+                    <button onclick="loadDailyDetails(\'' . $summary->tanggal . '\')"
+                            class="btn btn-xs btn-info btn-flat">
+                        <i class="fa fa-eye"></i> Detail
+                    </button>';
+                })
+                ->rawColumns(['aksi'])
+                ->make(true);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    public function dailyDetails($date)
+    {
+        $pembelian = Pembelian::with(['supplier'])
+            ->whereDate('created_at', $date)
+            ->orderBy('id_pembelian', 'desc')
+            ->get();
+
+        return datatables()
+            ->of($pembelian)
+            ->addIndexColumn()
+            ->addColumn('waktu', function ($pembelian) {
+                return $pembelian->created_at->format('H:i:s');
+            })
+            ->addColumn('total_item', function ($pembelian) {
+                return format_uang($pembelian->total_item);
+            })
+            ->addColumn('total_harga', function ($pembelian) {
+                return 'Rp. ' . format_uang($pembelian->total_harga);
+            })
+            ->addColumn('bayar', function ($pembelian) {
+                return 'Rp. ' . format_uang($pembelian->bayar);
+            })
+            ->addColumn('supplier', function ($pembelian) {
+                return $pembelian->supplier->nama ?? '';
+            })
+            ->editColumn('diskon', function ($pembelian) {
+                return $pembelian->diskon . '%';
+            })
+            ->addColumn('aksi', function ($pembelian) {
+                return '
+                <div class="btn-group">
+                    <button onclick="showDetail(`' . route('pembelian.show', $pembelian->id_pembelian) . '`)" class="btn btn-xs btn-info btn-flat"><i class="fa fa-eye"></i></button>
+                    <button onclick="deleteData(`' . route('pembelian.destroy', $pembelian->id_pembelian) . '`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
+                </div>';
+            })
+            ->rawColumns(['aksi'])
+            ->make(true);
     }
 
     public function data()
@@ -86,6 +165,9 @@ class PembelianController extends Controller
             $produk->update();
         }
 
+        // Update daily summary setelah pembelian disimpan
+        PembelianDailySummary::updateDailySummary(now()->toDateString());
+
         return redirect()->route('pembelian.index');
     }
 
@@ -129,6 +211,9 @@ class PembelianController extends Controller
         }
 
         $pembelian->delete();
+
+        // Update daily summary setelah pembelian dihapus
+        PembelianDailySummary::updateDailySummary($pembelian->created_at->toDateString());
 
         return response(null, 204);
     }

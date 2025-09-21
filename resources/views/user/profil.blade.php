@@ -81,8 +81,12 @@
             else $('#password, #password_confirmation').attr('required', false);
         });
 
-        $('.form-profil').validator().on('submit', function (e) {
-            if (! e.preventDefault()) {
+        // Initialize form validation
+        $('.form-profil').validate();
+
+        $('.form-profil').on('submit', function (e) {
+            e.preventDefault();
+            if ($(this).valid()) {
                 $.ajax({
                     url: $('.form-profil').attr('action'),
                     type: $('.form-profil').attr('method'),

@@ -60,9 +60,13 @@
             ]
         });
 
-        $('#modal-form').validator().on('submit', function (e) {
-            if (! e.preventDefault()) {
-                $.post($('#modal-form form').attr('action'), $('#modal-form form').serialize())
+        // Initialize form validation
+        $('#modal-form form').validate();
+
+        $('#modal-form form').on('submit', function (e) {
+            e.preventDefault();
+            if ($(this).valid()) {
+                $.post($(this).attr('action'), $(this).serialize())
                     .done((response) => {
                         $('#modal-form').modal('hide');
                         table.ajax.reload();

@@ -93,8 +93,12 @@
     $(function () {
         showData();
 
-        $('.form-setting').validator().on('submit', function (e) {
-            if (! e.preventDefault()) {
+        // Initialize form validation
+        $('.form-setting').validate();
+
+        $('.form-setting').on('submit', function (e) {
+            e.preventDefault();
+            if ($(this).valid()) {
                 $.ajax({
                     url: $('.form-setting').attr('action'),
                     type: $('.form-setting').attr('method'),

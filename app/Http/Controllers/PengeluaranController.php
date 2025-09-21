@@ -4,12 +4,78 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Pengeluaran;
+use App\Models\PengeluaranDailySummary;
 
 class PengeluaranController extends Controller
 {
     public function index()
     {
         return view('pengeluaran.index');
+    }
+
+    public function dailySummary()
+    {
+        try {
+            $summaries = PengeluaranDailySummary::orderBy('tanggal', 'desc')->get();
+
+            return datatables()
+                ->of($summaries)
+                ->addIndexColumn()
+                ->addColumn('tanggal', function ($summary) {
+                    return tanggal_indonesia($summary->tanggal, false);
+                })
+                ->addColumn('total_pengeluaran', function ($summary) {
+                    return 'Rp. ' . format_uang($summary->total_pengeluaran ?? 0);
+                })
+                ->addColumn('total_transaksi', function ($summary) {
+                    return format_uang($summary->total_transaksi ?? 0);
+                })
+                ->addColumn('aksi', function ($summary) {
+                    return '
+                    <button onclick="loadDailyDetails(\'' . $summary->tanggal . '\')"
+                            class="btn btn-xs btn-info btn-flat">
+                        <i class="fa fa-eye"></i> Detail
+                    </button>';
+                })
+                ->rawColumns(['aksi'])
+                ->make(true);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    public function dailyDetails($date)
+    {
+        $pengeluaran = Pengeluaran::whereDate('created_at', $date)
+            ->orderBy('id_pengeluaran', 'desc')
+            ->get();
+
+        return datatables()
+            ->of($pengeluaran)
+            ->addIndexColumn()
+            ->addColumn('waktu', function ($pengeluaran) {
+                return $pengeluaran->created_at->format('H:i:s');
+            })
+            ->addColumn('deskripsi', function ($pengeluaran) {
+                return $pengeluaran->deskripsi;
+            })
+            ->addColumn('nominal', function ($pengeluaran) {
+                return 'Rp. ' . format_uang($pengeluaran->nominal);
+            })
+            ->addColumn('aksi', function ($pengeluaran) {
+                return '
+                <div class="btn-group">
+                    <button type="button" onclick="editForm(`' . route('pengeluaran.update', $pengeluaran->id_pengeluaran) . '`)" class="btn btn-xs btn-info btn-flat"><i class="fa fa-pencil"></i></button>
+                    <button type="button" onclick="deleteData(`' . route('pengeluaran.destroy', $pengeluaran->id_pengeluaran) . '`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
+                </div>';
+            })
+            ->rawColumns(['aksi'])
+            ->make(true);
     }
 
     public function data()
@@ -56,6 +122,9 @@ class PengeluaranController extends Controller
     public function store(Request $request)
     {
         $pengeluaran = Pengeluaran::create($request->all());
+
+        // Update daily summary setelah pengeluaran ditambah
+        PengeluaranDailySummary::updateDailySummary(now()->toDateString());
 
         return response()->json([
             'success' => true,
@@ -106,6 +175,9 @@ class PengeluaranController extends Controller
         
         $pengeluaran->update($request->all());
 
+        // Update daily summary setelah pengeluaran diperbarui
+        PengeluaranDailySummary::updateDailySummary($pengeluaran->created_at->toDateString());
+
         return response()->json([
             'success' => true,
             'message' => 'Pengeluaran berhasil diperbarui!'
@@ -129,7 +201,11 @@ class PengeluaranController extends Controller
         }
 
         $deskripsi = $pengeluaran->deskripsi;
+        $tanggal = $pengeluaran->created_at->toDateString();
         $pengeluaran->delete();
+
+        // Update daily summary setelah pengeluaran dihapus
+        PengeluaranDailySummary::updateDailySummary($tanggal);
 
         return response()->json([
             'success' => true,

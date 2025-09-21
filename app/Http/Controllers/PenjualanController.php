@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Penjualan;
 use App\Models\PenjualanDetail;
+use App\Models\PenjualanDailySummary;
 use App\Models\Produk;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -14,6 +15,102 @@ class PenjualanController extends Controller
     public function index()
     {
         return view('penjualan.index');
+    }
+
+    public function dailySummary()
+    {
+        try {
+            $summaries = PenjualanDailySummary::orderBy('tanggal', 'desc')->get();
+
+            return datatables()
+                ->of($summaries)
+                ->addIndexColumn()
+                ->addColumn('tanggal', function ($summary) {
+                    return tanggal_indonesia($summary->tanggal, false);
+                })
+                ->addColumn('total_penjualan', function ($summary) {
+                    return 'Rp. ' . format_uang($summary->total_penjualan ?? 0);
+                })
+                ->addColumn('total_transaksi', function ($summary) {
+                    return format_uang($summary->total_transaksi ?? 0);
+                })
+                ->addColumn('total_item', function ($summary) {
+                    return format_uang($summary->total_item ?? 0);
+                })
+                ->addColumn('total_keuntungan', function ($summary) {
+                    if (auth()->user()->level == 1) {
+                        return 'Rp. ' . format_uang($summary->total_keuntungan ?? 0);
+                    }
+                    return '-';
+                })
+                ->addColumn('aksi', function ($summary) {
+                    return '
+                    <button onclick="loadDailyDetails(\'' . $summary->tanggal . '\')"
+                            class="btn btn-xs btn-info btn-flat">
+                        <i class="fa fa-eye"></i> Detail
+                    </button>';
+                })
+                ->rawColumns(['aksi'])
+                ->make(true);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    public function dailyDetails($date)
+    {
+        $penjualan = Penjualan::with(['member', 'user'])
+            ->whereDate('created_at', $date)
+            ->orderBy('id_penjualan', 'desc')
+            ->get();
+
+        return datatables()
+            ->of($penjualan)
+            ->addIndexColumn()
+            ->addColumn('waktu', function ($penjualan) {
+                return $penjualan->created_at->format('H:i:s');
+            })
+            ->addColumn('total_item', function ($penjualan) {
+                return format_uang($penjualan->total_item);
+            })
+            ->addColumn('total_harga', function ($penjualan) {
+                return 'Rp. ' . format_uang($penjualan->total_harga);
+            })
+            ->addColumn('bayar', function ($penjualan) {
+                return 'Rp. ' . format_uang($penjualan->bayar);
+            })
+            ->addColumn('kode_member', function ($penjualan) {
+                $member = $penjualan->member->kode_member ?? '';
+                return '<span class="label label-success">' . $member . '</span>';
+            })
+            ->editColumn('diskon', function ($penjualan) {
+                return $penjualan->diskon . '%';
+            })
+            ->editColumn('kasir', function ($penjualan) {
+                return $penjualan->user->name ?? '';
+            })
+            ->addColumn('keuntungan', function ($penjualan) {
+                if (auth()->user()->level == 1) {
+                    return 'Rp. ' . format_uang($penjualan->keuntungan);
+                }
+                return '-';
+            })
+            ->addColumn('aksi', function ($penjualan) {
+                return '
+                <div class="btn-group">
+                    <button onclick="showDetail(`' . route('penjualan.show', $penjualan->id_penjualan) . '`)" class="btn btn-xs btn-info btn-flat"><i class="fa fa-eye"></i></button>
+                    <button onclick="printNotaKecil(`' . route('penjualan.notaKecil', $penjualan->id_penjualan) . '`)" class="btn btn-xs btn-primary btn-flat"><i class="fa fa-print"></i></button>
+                    <button onclick="printNotaBesar(`' . route('penjualan.notaBesar', $penjualan->id_penjualan) . '`)" class="btn btn-xs btn-success btn-flat"><i class="fa fa-file-pdf-o"></i></button>
+                    <button onclick="deleteData(`' . route('penjualan.destroy', $penjualan->id_penjualan) . '`)" class="btn btn-xs btn-danger btn-flat"><i class="fa fa-trash"></i></button>
+                </div>';
+            })
+            ->rawColumns(['aksi', 'kode_member'])
+            ->make(true);
     }
 
     public function data()
@@ -119,6 +216,9 @@ class PenjualanController extends Controller
         $penjualan->keuntungan = $total_keuntungan;
         $penjualan->save();
 
+        // Update daily summary setelah penjualan disimpan
+        PenjualanDailySummary::updateDailySummary(now()->toDateString());
+
         return redirect()->route('transaksi.selesai');
     }
 
@@ -163,6 +263,9 @@ class PenjualanController extends Controller
         }
 
         $penjualan->delete();
+
+        // Update daily summary setelah penjualan dihapus
+        PenjualanDailySummary::updateDailySummary($penjualan->created_at->toDateString());
 
         return response(null, 204);
     }
