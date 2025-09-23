@@ -137,15 +137,40 @@
         background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
     }
     
+    /* DateTime display styling */
+    .datetime-display {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        margin: 8px 10px !important;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .datetime-display:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .main-header .navbar-nav > .user-menu > a {
             margin: 5px !important;
             padding: 3px 10px 3px 3px !important;
         }
-        
+
         .main-header .hidden-xs {
             font-size: 13px;
+        }
+
+        .datetime-display {
+            padding: 10px 12px !important;
+            margin: 5px !important;
+            font-size: 12px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .datetime-display {
+            display: none !important;
         }
     }
 </style>
@@ -174,6 +199,10 @@
 
         <div class="navbar-custom-menu">
             <ul class="nav navbar-nav">
+                <!-- DateTime Display -->
+                <li class="datetime-display" style="padding: 15px 20px; color: white; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                    <span id="current-datetime">{{ now()->setTimezone('Asia/Jakarta')->format('d M Y - H:i:s') }} WIB</span>
+                </li>
                 <!-- User Account: style can be found in dropdown.less -->
                 <li class="dropdown user user-menu">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -211,3 +240,57 @@
 <form action="{{ route('logout') }}" method="post" id="logout-form" style="display: none;">
     @csrf
 </form>
+
+<script>
+function updateDateTime() {
+    // Check if moment.js is available, if not use native Date
+    if (typeof moment !== 'undefined') {
+        // Using moment.js for better browser compatibility
+        // Add 7 hours for WIB timezone (UTC+7)
+        const now = moment().utc().add(7, 'hours');
+        const formattedDateTime = now.format('DD MMM YYYY - HH:mm:ss') + ' WIB';
+
+        const element = document.getElementById('current-datetime');
+        if (element) {
+            element.textContent = formattedDateTime;
+        }
+    } else {
+        // Fallback to native JavaScript
+        const now = new Date();
+
+        // Manual timezone conversion to WIB (UTC+7)
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const wibTime = new Date(utc + (7 * 3600000));
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+                       'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        const day = String(wibTime.getDate()).padStart(2, '0');
+        const month = months[wibTime.getMonth()];
+        const year = wibTime.getFullYear();
+        const hours = String(wibTime.getHours()).padStart(2, '0');
+        const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+        const seconds = String(wibTime.getSeconds()).padStart(2, '0');
+
+        const formattedDateTime = `${day} ${month} ${year} - ${hours}:${minutes}:${seconds} WIB`;
+
+        const element = document.getElementById('current-datetime');
+        if (element) {
+            element.textContent = formattedDateTime;
+        }
+    }
+}
+
+// Wait for moment.js to load if it's being loaded asynchronously
+function initDateTime() {
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDateTime);
+} else {
+    initDateTime();
+}
+</script>
