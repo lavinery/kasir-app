@@ -227,7 +227,7 @@
         {{-- Tampilkan diskon item jika ada --}}
         @if($total_item_discount > 0)
             <tr>
-                <td>💥 Total Disc Item:</td>
+                <td>Total Disc Item:</td>
                 <td class="text-right">-{{ format_uang($total_item_discount) }}</td>
             </tr>
         @endif
@@ -237,9 +237,9 @@
             <tr>
                 <td>
                     @if(isset($penjualan->member) && $penjualan->member)
-                        💳 Disc Member ({{ $diskon_member_persen }}%):
+                        Disc Member ({{ $diskon_member_persen }}%):
                     @else
-                        🏷️ Disc Tambahan:
+                         Disc Tambahan:
                     @endif
                 </td>
                 <td class="text-right">-{{ format_uang($diskon_member_rupiah) }}</td>
@@ -247,7 +247,7 @@
         @endif
         
         <tr>
-            <td>📦 Total Item:</td>
+            <td> Total Item:</td>
             <td class="text-right">{{ $penjualan->total_item }} pcs</td>
         </tr>
     </table>
@@ -257,7 +257,7 @@
         <table width="100%" style="border: 0;">
             <tr class="savings-highlight">
                 <td class="text-center bold" colspan="2" style="font-size: 12pt; padding: 5px 0;">
-                    🎉 TOTAL HEMAT: {{ format_uang($total_hemat) }} 🎉
+                     TOTAL HEMAT: {{ format_uang($total_hemat) }}
                 </td>
             </tr>
         </table>
@@ -267,15 +267,15 @@
     <!-- Grand Total -->
     <table width="100%" style="border: 0;">
         <tr class="grand-total">
-            <td class="bold" style="font-size: 13pt;">💰 TOTAL BAYAR:</td>
+            <td class="bold" style="font-size: 13pt;"> TOTAL BAYAR:</td>
             <td class="text-right bold" style="font-size: 13pt;">{{ format_uang($penjualan->bayar) }}</td>
         </tr>
         <tr>
-            <td>💵 Tunai:</td>
+            <td>Tunai:</td>
             <td class="text-right">{{ format_uang($penjualan->diterima) }}</td>
         </tr>
         <tr>
-            <td>💸 Kembali:</td>
+            <td>Kembali:</td>
             <td class="text-right">{{ format_uang($penjualan->diterima - $penjualan->bayar) }}</td>
         </tr>
     </table>
@@ -288,7 +288,7 @@
     
     @if($total_hemat > 0)
         <p class="text-center discount-item">
-            ✨ Anda berhemat {{ format_uang($total_hemat) }} hari ini! ✨
+             Anda berhemat {{ format_uang($total_hemat) }} hari ini! 
         </p>
     @endif
     
@@ -296,10 +296,10 @@
         <br>
         <p class="text-center">
             @if(isset($setting->website))
-                🌐 {{ $setting->website }}
+                {{ $setting->website }}
             @endif
             @if(isset($setting->email))
-                <br>📧 {{ $setting->email }}
+                <br> {{ $setting->email }}
             @endif
         </p>
     @endif
