@@ -247,8 +247,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/favorites', [FavoriteProductController::class, 'index'])->name('favorites');
             Route::post('/favorites/add', [FavoriteProductController::class, 'add'])->name('favorites.add');
             Route::patch('/favorites/reorder', [FavoriteProductController::class, 'reorder'])->name('favorites.reorder');
-            Route::patch('/favorites/toggle/{id}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
-            Route::delete('/favorites/{id}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
+            Route::patch('/favorites/toggle/{favorite}', [FavoriteProductController::class, 'toggle'])->name('favorites.toggle');
+            Route::delete('/favorites/{favorite}', [FavoriteProductController::class, 'destroy'])->name('favorites.destroy');
         });
 
         // API untuk pencarian produk (admin only)

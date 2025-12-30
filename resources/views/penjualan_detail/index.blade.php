@@ -33,6 +33,7 @@
         }
 
         /* Horizontal favorites panel */
+        /* COMMENTED OUT - Favorites feature hidden
         .favorites-horizontal-container {
             background: #f4f4f4;
             border: 1px solid #ddd;
@@ -113,6 +114,7 @@
             font-size: 8px;
             opacity: 0.9;
         }
+        */
 
         /* Compact table */
         .table-compact {
@@ -256,12 +258,14 @@
         }
 
         /* Hide empty state for cleaner look */
+        /* COMMENTED OUT - Favorites feature hidden
         .favorites-empty {
             text-align: center;
             padding: 10px;
             color: #999;
             font-size: 11px;
         }
+        */
 
         /* Compact button styles */
         .btn-compact {
@@ -317,6 +321,7 @@
             </div>
 
             <!-- Horizontal Favorites Panel -->
+            <!-- COMMENTED OUT - Favorites feature hidden
             <div class="favorites-horizontal-container" id="favorites-container">
                 <div class="favorites-title">
                     <i class="fa fa-star text-warning"></i>
@@ -329,6 +334,7 @@
                     </div>
                 </div>
             </div>
+            -->
 
             <!-- Two Column Layout -->
             <div class="transaction-layout">
@@ -445,9 +451,10 @@ let table, table2;
 
 $(function() {
     $('body').addClass('sidebar-collapse');
-    
+
     // Load favorites
-    loadFavorites();
+    // COMMENTED OUT - Favorites feature hidden
+    // loadFavorites();
 
     table = $('.table-penjualan').DataTable({
         responsive: true,
@@ -547,6 +554,8 @@ $(function() {
 });
 
 // Compact favorites functions
+// COMMENTED OUT - Favorites feature hidden
+/*
 function loadFavorites() {
     $.getJSON('{{ route("transactions.favorites") }}')
         .done(function(favorites) {
@@ -588,7 +597,7 @@ function renderCompactFavorites(favorites) {
 function addToCart(product) {
     const $btn = $(`button[data-id="${product.product_id}"]`);
     const originalHtml = $btn.html();
-    
+
     $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
 
     $.post('{{ route("transaksi.store") }}', {
@@ -600,7 +609,7 @@ function addToCart(product) {
         $btn.html('<i class="fa fa-check"></i>');
         table.ajax.reload(() => loadForm($('#diskon').val()));
         $('#kode_produk').focus();
-        
+
         setTimeout(() => {
             $btn.prop('disabled', false).html(originalHtml);
         }, 1000);
@@ -620,6 +629,7 @@ function formatNumber(num) {
 function truncateText(text, maxLength) {
     return text.length <= maxLength ? text : text.substring(0, maxLength - 3) + '...';
 }
+*/
 
 // Original functions (unchanged)
 function tampilProduk() {
