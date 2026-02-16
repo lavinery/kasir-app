@@ -17,4 +17,9 @@ class Pembelian extends Model
     {
         return $this->belongsTo(Supplier::class, 'id_supplier', 'id_supplier');
     }
+
+    public function detail()
+    {
+        return $this->hasMany(PembelianDetail::class, 'id_pembelian', 'id_pembelian');
+    }
 }

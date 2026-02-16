@@ -21,6 +21,13 @@ class CekLevel
             return $next($request);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses ke resource ini.',
+            ], 403);
+        }
+
         return redirect()->route('dashboard');
     }
 }

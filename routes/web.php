@@ -31,6 +31,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// API Documentation (public, no auth required)
+Route::get('/api-docs', function () {
+    return view('api.documentation');
+})->name('api.documentation');
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
