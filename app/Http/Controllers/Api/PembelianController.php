@@ -47,7 +47,7 @@ class PembelianController extends ApiController
     {
         $query = Pembelian::with(['supplier']);
 
-        if ($request->get('include') && str_contains($request->include, 'detail')) {
+        if ($request->get('include') && strpos($request->include, 'detail') !== false) {
             $query->with(['detail' => function ($q) {
                 $q->with('produk');
             }]);

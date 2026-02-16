@@ -51,7 +51,7 @@ class PenjualanController extends ApiController
         $query->with(['member', 'user']);
 
         // Include detail if requested (or always include)
-        if ($request->get('include') && str_contains($request->include, 'detail')) {
+        if ($request->get('include') && strpos($request->include, 'detail') !== false) {
             $query->with(['detail' => function ($q) {
                 $q->with('produk');
             }]);
