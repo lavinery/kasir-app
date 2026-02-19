@@ -4,7 +4,9 @@
       "Bash(php artisan:*)",
       "Bash(php:*)",
       "Bash(find:*)",
-      "Bash(composer:*)"
+      "Bash(composer:*)",
+      "Bash(grep:*)",
+      "Bash(git -C \"C:\\\\laragon\\\\www\\\\kasir-app\" log --oneline -20)"
     ],
     "deny": [],
     "ask": []
